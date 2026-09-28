@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./Backend
 
     steps:
       - uses: actions/checkout@v4
@@ -19,15 +22,7 @@ jobs:
           php-version: '8.2'
 
       - name: Install Composer Dependencies
-        run: |
-          cd Backend
-          composer install --no-dev --optimize-autoloader
-
-      - name: Copy .env
-        run: |
-          cd Backend
-          cp .env.example .env
-          php artisan key:generate
+        run: composer install --no-dev --optimize-autoloader
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
