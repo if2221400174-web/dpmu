@@ -6,7 +6,7 @@ import { getPengaduan } from "../../_sevices/pengaduans";
 import { getKritikDpm } from "../../_sevices/kritikdpms";
 import { getStrukturDpm } from "../../_sevices/strukturdpms";
 import { getBeritaDpm } from "../../_sevices/beritadpm";
-import { getKeputusan } from "../../_sevices/Keputusan";
+import { getKeputusan } from "../../_sevices/keputusan";
 
 export default function Dashboard() {
   // State untuk menyimpan data statistik dari setiap modul
