@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { showKeputusan } from "../../../_sevices/Keputusan";
+import { showKeputusan } from "../../../_sevices/keputusan";
 import { keputusanfiletorage } from "../../../_api";
 
 export default function ShowKeputusan() {

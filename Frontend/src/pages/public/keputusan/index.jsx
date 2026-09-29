@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getKeputusan } from "../../../_sevices/Keputusan";
+import { getKeputusan } from "../../../_sevices/keputusan";
 
 export default function PublikKeputusan() {
   const [keputusans, setKeputusans] = useState([]);
