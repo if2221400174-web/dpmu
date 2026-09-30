@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { keputusanfiletorage } from "../../../_api";
-import { deleteKeputusan, getKeputusan } from "../../../_sevices/Keputusan";
+import { deleteKeputusan, getKeputusan } from "../../../_sevices/keputusan";
 
 export default function AdminKeputusan() {
   const [keputusan, setKeputusans] = useState([]);

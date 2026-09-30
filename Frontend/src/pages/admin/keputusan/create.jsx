@@ -1,6 +1,6 @@
 import {  useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createKeputusan } from "../../../_sevices/Keputusan";
+import { createKeputusan } from "../../../_sevices/keputusan";
 
 export default function KeputusanCreate() {
   const [formData, setFormdata] = useState({
