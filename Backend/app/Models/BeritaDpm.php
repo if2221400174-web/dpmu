@@ -13,5 +13,6 @@ class BeritaDpm extends Model
         'isi_berita',
         'deskripsi_foto',
         'foto_berita',
+        'tanggal_terbit',
     ];
 }

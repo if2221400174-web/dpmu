@@ -14,16 +14,25 @@ const formatContent = (content) => {
     .join("");
 };
 
+const stripHtml = (html) => {
+  if (!html) return "";
+  return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+};
+
 const formatDate = (dateString) => {
   if (!dateString) return "";
-  return new Date(dateString).toLocaleDateString("id-ID", {
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("id-ID", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
 };
 
 const formatTime = (dateString) => {
   if (!dateString) return "";
-  return new Date(dateString).toLocaleTimeString("id-ID", {
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString("id-ID", {
     hour: "2-digit", minute: "2-digit",
   }) + " WIB";
 };
@@ -34,6 +43,7 @@ export default function ShowBeritaDpm() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // 1. Fetch Data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -47,6 +57,36 @@ export default function ShowBeritaDpm() {
     };
     fetchData();
   }, [id]);
+
+  // 2. Set Meta Tags (Open Graph) untuk Preview WhatsApp / Telegram
+  useEffect(() => {
+    if (berita) {
+      document.title = `${berita.judul} | DPM UNUJA`;
+
+      const setMetaTag = (property, content) => {
+        if (!content) return;
+        let element = document.querySelector(`meta[property="${property}"]`);
+        if (!element) {
+          element = document.createElement("meta");
+          element.setAttribute("property", property);
+          document.head.appendChild(element);
+        }
+        element.setAttribute("content", content);
+      };
+
+      setMetaTag("og:title", berita.judul);
+      setMetaTag("og:description", stripHtml(berita.isi_berita).substring(0, 150) + "...");
+      setMetaTag("og:url", window.location.href);
+      setMetaTag("og:type", "article");
+      
+      if (berita.foto_berita) {
+        setMetaTag("og:image", `${beritaImageStorage}/${berita.foto_berita}`);
+      }
+    }
+  }, [berita]);
+
+  // ── UPDATE: Variabel waktu memprioritaskan tanggal_terbit
+  const displayDate = berita?.tanggal_terbit || berita?.created_at || berita?.tanggal;
 
   const shareUrl = encodeURIComponent(window.location.href);
   const shareTitle = encodeURIComponent(berita?.judul || "Berita DPM UNUJA");
@@ -134,9 +174,9 @@ export default function ShowBeritaDpm() {
               {berita.judul}
             </h1>
 
-            {/* Meta: tanggal + waktu */}
+            {/* ── UPDATE: Memakai format displayDate ── */}
             <p className="text-sm text-gray-500 mb-4">
-              {formatDate(berita.created_at)}, {formatTime(berita.created_at)}
+              {formatDate(displayDate)}, {formatTime(displayDate)}
             </p>
 
             {/* Tombol Share */}
@@ -159,7 +199,7 @@ export default function ShowBeritaDpm() {
             {/* Divider */}
             <div className="border-t border-gray-100 mb-6"/>
 
-            {/* Isi Berita — render HTML dengan paragraf benar */}
+            {/* Isi Berita */}
             <div
               className="berita-content text-gray-700 text-[15px] leading-relaxed"
               dangerouslySetInnerHTML={{ __html: formatContent(berita.isi_berita) }}
@@ -190,52 +230,23 @@ export default function ShowBeritaDpm() {
       </div>
 
       <style>{`
-        /* Paragraf */
-        .berita-content p {
-          margin-bottom: 1.25rem;
-          line-height: 1.8;
-        }
-        .berita-content p:last-child {
-          margin-bottom: 0;
-        }
-        /* Heading */
-        .berita-content h1,
-        .berita-content h2,
-        .berita-content h3,
-        .berita-content h4 {
-          font-weight: 700;
-          color: #1e3a5f;
-          margin-top: 1.75rem;
-          margin-bottom: 0.75rem;
-          line-height: 1.3;
+        .berita-content p { margin-bottom: 1.25rem; line-height: 1.8; }
+        .berita-content p:last-child { margin-bottom: 0; }
+        .berita-content h1, .berita-content h2, .berita-content h3, .berita-content h4 {
+          font-weight: 700; color: #1e3a5f; margin-top: 1.75rem; margin-bottom: 0.75rem; line-height: 1.3;
         }
         .berita-content h1 { font-size: 1.5rem; }
         .berita-content h2 { font-size: 1.25rem; }
         .berita-content h3 { font-size: 1.1rem; }
-        /* Blockquote */
         .berita-content blockquote {
-          border-left: 4px solid #1e40af;
-          padding: 0.75rem 1rem;
-          margin: 1.5rem 0;
-          background: #eff6ff;
-          border-radius: 0 8px 8px 0;
-          font-style: italic;
-          color: #374151;
+          border-left: 4px solid #1e40af; padding: 0.75rem 1rem; margin: 1.5rem 0;
+          background: #eff6ff; border-radius: 0 8px 8px 0; font-style: italic; color: #374151;
         }
-        /* List */
         .berita-content ul { list-style: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
         .berita-content ol { list-style: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
         .berita-content li { margin-bottom: 0.4rem; line-height: 1.7; }
-        /* Image */
-        .berita-content img {
-          border-radius: 12px;
-          max-width: 100%;
-          margin: 1.5rem auto;
-          display: block;
-        }
-        /* Link */
+        .berita-content img { border-radius: 12px; max-width: 100%; margin: 1.5rem auto; display: block; }
         .berita-content a { color: #1e40af; text-decoration: underline; }
-        /* Strong / em */
         .berita-content strong { font-weight: 700; color: #111827; }
         .berita-content em { font-style: italic; }
       `}</style>

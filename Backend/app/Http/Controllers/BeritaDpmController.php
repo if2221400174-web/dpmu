@@ -37,6 +37,7 @@ class BeritaDpmController extends Controller
             'isi_berita' => 'required|string|max:20000',
             'deskripsi_foto' => 'required|string|max:2000',
             'foto_berita' => 'required|image|mimes:jpeg,png,JPG|max:2048',
+            'tanggal_terbit' => 'nullable|date',
         ]);
 
         //2. check validator eror
@@ -56,6 +57,7 @@ class BeritaDpmController extends Controller
             "isi_berita" => $request->isi_berita,
             "deskripsi_foto" => $request->deskripsi_foto,
             "foto_berita" => $image->hashName(),
+            "tanggal_terbit" => $request->tanggal_terbit,
         ]);
 
         //5. response
@@ -100,6 +102,7 @@ class BeritaDpmController extends Controller
             'isi_berita' => 'required|string|max:20000',
             'deskripsi_foto' => 'required|string|max:2000',
             'foto_berita' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'tanggal_terbit' => 'nullable|date',
         ]);
 
         if($validator->fails()){
@@ -113,6 +116,7 @@ class BeritaDpmController extends Controller
             "judul" => $request->judul,
             "isi_berita" => $request->isi_berita,
             "deskripsi_foto" => $request->deskripsi_foto,
+            "tanggal_terbit" => $request->tanggal_terbit,
         ];
         //4 handle image(uapload atau delete)
         if ($request->foto_berita){

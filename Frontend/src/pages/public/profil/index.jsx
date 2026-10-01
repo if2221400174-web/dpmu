@@ -157,12 +157,11 @@ export default function PublikProfil() {
           ) : tentang && (
             <section>
               <div className="text-center mb-12 fade-up">
-                <div className="section-label mx-auto w-fit">Tentang Kami</div>
                 <h2 className="display-font text-3xl sm:text-4xl font-bold text-gray-900 mt-2">
                   Landasan Organisasi
                 </h2>
                 <p className="text-gray-500 mt-3 max-w-xl mx-auto text-sm">
-                  Fondasi nilai, arah, dan tujuan Dewan Perwakilan Mahasiswa Universitas Nurul Jadid.
+                  Fondasi tujuan, fungsi, visi dan misi Dewan Perwakilan Mahasiswa Universitas Nurul Jadid.
                 </p>
               </div>
 
@@ -215,9 +214,8 @@ export default function PublikProfil() {
           ) : strukturs.length > 0 && (
             <section>
               <div className="text-center mb-12 fade-up">
-                <div className="section-label mx-auto w-fit">Kepengurusan</div>
                 <h2 className="display-font text-3xl sm:text-4xl font-bold text-gray-900 mt-2">
-                  Pengurus DPM
+                  Struktur Anggota Dewan Perwakilan Mahasiswa
                 </h2>
                 <p className="text-gray-500 mt-3 max-w-xl mx-auto text-sm">
                   Individu-individu terpilih yang mengemban amanah mewakili suara mahasiswa.

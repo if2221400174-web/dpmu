@@ -11,6 +11,7 @@ export default function BeritaDpmEdit() {
     isi_berita: "",
     foto_berita: null,
     deskripsi_foto: "",
+    tanggal_terbit: "", // ← Tambahan state tanggal_terbit
   });
   const [previewImage, setPreviewImage] = useState(null);
   const [existingImage, setExistingImage] = useState(null);
@@ -24,13 +25,26 @@ export default function BeritaDpmEdit() {
   useEffect(() => {
     const fetchData = async () => {
       const [beritaDpmData] = await Promise.all([showBeritaDpm(id)]);
+      
+      // Mengubah format tanggal dari database agar sesuai dengan input datetime-local
+      let formattedDate = "";
+      if (beritaDpmData.data.tanggal_terbit) {
+        const dateObj = new Date(beritaDpmData.data.tanggal_terbit);
+        if (!isNaN(dateObj.getTime())) {
+          const offset = dateObj.getTimezoneOffset() * 60000;
+          formattedDate = (new Date(dateObj - offset)).toISOString().slice(0, 16);
+        }
+      }
+
       setFormdata({
         judul: beritaDpmData.data.judul,
         isi_berita: beritaDpmData.data.isi_berita,
         foto_berita: null,
         deskripsi_foto: beritaDpmData.data.deskripsi_foto,
+        tanggal_terbit: formattedDate, // ← Masukkan data tanggal ke form
         _method: "PUT",
       });
+
       if (beritaDpmData.data.foto_berita) {
         setExistingImage(`${beritaImageStorage}/${beritaDpmData.data.foto_berita}`);
       }
@@ -85,7 +99,6 @@ export default function BeritaDpmEdit() {
 
   const restoreSelection = (arg) => {
     if (!arg) return;
-    // Serialized path-based
     if (arg.startPath && editorRef.current) {
       try {
         const nodeFromPath = (path) => {
@@ -107,7 +120,6 @@ export default function BeritaDpmEdit() {
         return;
       } catch (_) {}
     }
-    // Range-based fallback
     if (arg.cloneRange) {
       const sel = window.getSelection();
       sel.removeAllRanges();
@@ -120,8 +132,7 @@ export default function BeritaDpmEdit() {
     if (!editorRef.current || historyRef.current.isApplying) return;
     const html = editorRef.current.innerHTML;
     const last = historyRef.current.stack[historyRef.current.index];
-    if (last && last.html === html) return; // hindari duplikat
-    // Truncate redo entries
+    if (last && last.html === html) return;
     historyRef.current.stack = historyRef.current.stack.slice(0, historyRef.current.index + 1);
     historyRef.current.stack.push({ html, selSnapshot: serializeSelection() });
     if (historyRef.current.stack.length > HISTORY_LIMIT) historyRef.current.stack.shift();
@@ -191,29 +202,19 @@ export default function BeritaDpmEdit() {
       performUndo();
       return;
     }
-    if (
-      (e.ctrlKey || e.metaKey) &&
-      (e.key.toLowerCase() === "y" || (e.shiftKey && e.key.toLowerCase() === "z"))
-    ) {
+    if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === "y" || (e.shiftKey && e.key.toLowerCase() === "z"))) {
       e.preventDefault();
       performRedo();
       return;
     }
 
     const anchor = window.getSelection()?.anchorNode;
-    const inTable = anchor
-      ? anchor.nodeType === 3
-        ? anchor.parentElement?.closest("td,th")
-        : anchor.closest?.("td,th")
-      : null;
+    const inTable = anchor ? anchor.nodeType === 3 ? anchor.parentElement?.closest("td,th") : anchor.closest?.("td,th") : null;
 
     if (e.key === "Enter") {
       e.preventDefault();
-      if (inTable) {
-        document.execCommand("insertHTML", false, "<br>");
-      } else {
-        document.execCommand("insertHTML", false, "<p><br></p>");
-      }
+      if (inTable) document.execCommand("insertHTML", false, "<br>");
+      else document.execCommand("insertHTML", false, "<p><br></p>");
       setTimeout(() => {
         handleEditorChange();
         pushHistory();
@@ -321,6 +322,9 @@ export default function BeritaDpmEdit() {
       for (const key in formData) {
         if (key === "foto_berita") {
           if (formData.foto_berita instanceof File) payload.append("foto_berita", formData.foto_berita);
+        } else if (key === "tanggal_terbit" && !formData[key]) {
+          // Jika field tanggal dikosongkan, kirim waktu saat ini
+          payload.append(key, new Date().toISOString());
         } else {
           payload.append(key, formData[key]);
         }
@@ -333,24 +337,21 @@ export default function BeritaDpmEdit() {
     }
   };
 
-  // FIX: reset juga existingImage dan isEditorReady
   const handleReset = () => {
-    setFormdata({ judul: "", isi_berita: "", foto_berita: null, deskripsi_foto: "" });
+    setFormdata({ judul: "", isi_berita: "", foto_berita: null, deskripsi_foto: "", tanggal_terbit: "" });
     setPreviewImage(null);
-    setExistingImage(null);        // ← fix: hapus juga gambar lama
-    setIsEditorReady(false);       // ← fix: izinkan reinisialisasi editor
-    historyRef.current = { stack: [], index: -1, isApplying: false }; // ← fix: reset history
+    setExistingImage(null);
+    setIsEditorReady(false);
+    historyRef.current = { stack: [], index: -1, isApplying: false };
     if (editorRef.current) editorRef.current.innerHTML = "";
   };
 
-  // FIX: hapus preview DAN existing image sekaligus
   const handleRemoveImage = () => {
     setFormdata((prev) => ({ ...prev, foto_berita: null }));
     setPreviewImage(null);
-    setExistingImage(null);  // ← fix: gambar lama ikut hilang dari tampilan
+    setExistingImage(null);
   };
 
-  // ── JSX — tidak ada perubahan tampilan ───────────────────────────────────
   return (
     <>
       <section className="bg-gray-50 dark:bg-gray-900 min-h-screen">
@@ -374,6 +375,7 @@ export default function BeritaDpmEdit() {
           <form onSubmit={handleSubmit} onReset={handleReset}>
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="p-6 space-y-6">
+                
                 {/* Judul */}
                 <div>
                   <label htmlFor="judul" className="block mb-2 text-sm font-semibold text-gray-900 dark:text-white">
@@ -384,6 +386,32 @@ export default function BeritaDpmEdit() {
                     className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full p-3 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white transition-all duration-200"
                     placeholder="Masukkan judul berita..." required
                   />
+                </div>
+
+                {/* Tanggal Terbit */}
+                <div>
+                  <label htmlFor="tanggal_terbit" className="block mb-2 text-sm font-semibold text-gray-900 dark:text-white">
+                    Tanggal Terbit
+                    <span className="ml-2 text-xs font-normal text-gray-400">
+                      (opsional — kosongkan untuk update waktu terbit ke saat ini)
+                    </span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="tanggal_terbit"
+                    id="tanggal_terbit"
+                    value={formData.tanggal_terbit}
+                    onChange={handleChange}
+                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full p-3 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white transition-all duration-200"
+                  />
+                  {!formData.tanggal_terbit && (
+                    <p className="mt-1.5 text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
+                      </svg>
+                      Akan otomatis menggunakan waktu saat update berita ini jika dikosongkan
+                    </p>
+                  )}
                 </div>
 
                 {/* Isi Berita */}

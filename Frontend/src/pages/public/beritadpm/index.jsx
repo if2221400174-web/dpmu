@@ -25,14 +25,17 @@ const formatDate = (dateString) => {
   if (!dateString) return "";
   const now = new Date();
   const date = new Date(dateString);
+  
+  if (isNaN(date.getTime())) return "";
+
   const diffMs = now - date;
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 60) return `${diffMins} menit lalu`;
-  if (diffHours < 24) return `${diffHours} jam lalu`;
-  if (diffDays < 7) return `${diffDays} hari lalu`;
+  if (diffMins < 60 && diffMins >= 0) return `${diffMins} menit lalu`;
+  if (diffHours < 24 && diffHours >= 0) return `${diffHours} jam lalu`;
+  if (diffDays < 7 && diffDays >= 0) return `${diffDays} hari lalu`;
   return date.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 };
 
@@ -42,8 +45,13 @@ export default function PublikBeritaDpm() {
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState(null);
 
+  // ── UPDATE: Sorting memprioritaskan tanggal_terbit
   const sortByNewest = (arr) =>
-    [...arr].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    [...arr].sort((a, b) => {
+      const dateA = new Date(a.tanggal_terbit || a.created_at || a.tanggal || 0);
+      const dateB = new Date(b.tanggal_terbit || b.created_at || b.tanggal || 0);
+      return dateB - dateA;
+    });
 
   useEffect(() => {
     getBeritaDpm()
@@ -65,7 +73,7 @@ export default function PublikBeritaDpm() {
   );
 
   const hero = filtered[0];
-  const secondary = filtered.slice(1, 4);
+  const secondary = filtered.slice(1, 6);
   const rest = filtered.slice(4);
 
   const ImgBox = ({ src, alt, className }) => (
@@ -205,7 +213,8 @@ export default function PublikBeritaDpm() {
                         <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/>
                         </svg>
-                        {formatDate(hero.created_at)}
+                        {/* ── UPDATE: Tampilkan berdasarkan tanggal terbit ── */}
+                        {formatDate(hero.tanggal_terbit || hero.created_at || hero.tanggal)}
                       </span>
                     </div>
                   </Link>
@@ -229,7 +238,8 @@ export default function PublikBeritaDpm() {
                           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/>
                           </svg>
-                          {formatDate(b.created_at)}
+                          {/* ── UPDATE: Tampilkan berdasarkan tanggal terbit ── */}
+                          {formatDate(b.tanggal_terbit || b.created_at || b.tanggal)}
                         </span>
                       </div>
                     </Link>
@@ -242,7 +252,7 @@ export default function PublikBeritaDpm() {
                 <div>
                   <div className="flex items-center gap-3 mb-5">
                     <div className="w-1 h-6 bg-blue-900 rounded-full"/>
-                    <h2 className="text-lg font-bold text-gray-900">Berita Lainnya</h2>
+                    <h2 className="text-lg font-bold text-gray-900">Informasi Lainnya</h2>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                     {rest.map((b, i) => (
@@ -261,7 +271,8 @@ export default function PublikBeritaDpm() {
                             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/>
                             </svg>
-                            {formatDate(b.created_at)}
+                            {/* ── UPDATE: Tampilkan berdasarkan tanggal terbit ── */}
+                            {formatDate(b.tanggal_terbit || b.created_at || b.tanggal)}
                           </span>
                         </div>
                       </Link>
