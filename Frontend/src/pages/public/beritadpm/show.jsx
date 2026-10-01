@@ -38,10 +38,14 @@ const formatTime = (dateString) => {
 };
 
 export default function ShowBeritaDpm() {
-  const { id } = useParams();
+  // id di sini sekarang bisa menerima angka (ID lama) ATAU teks (Slug baru)
+  const { id } = useParams(); 
   const [berita, setBerita] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // State untuk efek tulisan "Tersalin!" pada tombol Copy Link
+  const [copied, setCopied] = useState(false);
 
   // 1. Fetch Data
   useEffect(() => {
@@ -58,7 +62,7 @@ export default function ShowBeritaDpm() {
     fetchData();
   }, [id]);
 
-  // 2. Set Meta Tags (Open Graph) untuk Preview WhatsApp / Telegram
+  // 2. Set Meta Tags (Open Graph) - Tetap ada untuk jaga-jaga
   useEffect(() => {
     if (berita) {
       document.title = `${berita.judul} | DPM UNUJA`;
@@ -85,11 +89,28 @@ export default function ShowBeritaDpm() {
     }
   }, [berita]);
 
-  // ── UPDATE: Variabel waktu memprioritaskan tanggal_terbit
   const displayDate = berita?.tanggal_terbit || berita?.created_at || berita?.tanggal;
 
-  const shareUrl = encodeURIComponent(window.location.href);
+  // =========================================================================
+  // SETUP SHARE LINK AJAIB (LARAVEL BACKEND)
+  // =========================================================================
+  
+  // ⚠️ GANTI INI dengan URL Backend Laravel kamu yang asli di Azure
+  const BACKEND_URL = "https://dpmu-backend-d2gbcvg8deh2egat.southeastasia-01.azurewebsites.net"; 
+  
+  // Kita buat link khusus yang mengarah ke Laravel agar gambar muncul di WA
+  // Jika berita lama belum punya slug, kita pakai id sebagai cadangan
+  const rawShareUrl = berita ? `${BACKEND_URL}/share/informasi/${berita.slug || berita.id}` : "";
+  const shareUrl = encodeURIComponent(rawShareUrl);
   const shareTitle = encodeURIComponent(berita?.judul || "Berita DPM UNUJA");
+
+  const handleCopyLink = () => {
+    if (rawShareUrl) {
+      navigator.clipboard.writeText(rawShareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000); // Tulisan "Tersalin!" akan hilang setelah 2 detik
+    }
+  };
 
   const shareLinks = [
     {
@@ -174,14 +195,14 @@ export default function ShowBeritaDpm() {
               {berita.judul}
             </h1>
 
-            {/* ── UPDATE: Memakai format displayDate ── */}
             <p className="text-sm text-gray-500 mb-4">
               {formatDate(displayDate)}, {formatTime(displayDate)}
             </p>
 
-            {/* Tombol Share */}
+            {/* AREA TOMBOL SHARE */}
             <div className="flex items-center gap-2 mb-6">
               <span className="text-sm font-medium text-gray-600 mr-1">Bagikan:</span>
+              
               {shareLinks.map((s) => (
                 <a
                   key={s.label}
@@ -194,6 +215,26 @@ export default function ShowBeritaDpm() {
                   {s.icon}
                 </a>
               ))}
+
+              {/* TOMBOL COPY LINK */}
+              <button
+                onClick={handleCopyLink}
+                title="Salin Tautan"
+                className="relative inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-500 hover:bg-gray-600 text-white transition-all duration-200 ml-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                </svg>
+                
+                {/* Tooltip Tulisan "Tersalin!" */}
+                {copied && (
+                  <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
+                    Tersalin!
+                    {/* Panah kecil ke bawah */}
+                    <svg className="absolute text-gray-800 h-2 w-full left-0 top-full" x="0px" y="0px" viewBox="0 0 255 255" xmlSpace="preserve"><polygon className="fill-current" points="0,0 127.5,127.5 255,0"/></svg>
+                  </span>
+                )}
+              </button>
             </div>
 
             {/* Divider */}
