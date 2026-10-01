@@ -6,12 +6,10 @@ use App\Models\BeritaDpm;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str; // <-- Ditambahkan untuk fitur Slug
 
 class BeritaDpmController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         $beritadpm = BeritaDpm::All();
@@ -31,7 +29,6 @@ class BeritaDpmController extends Controller
 
     public function store(Request $request)
     {
-        //1 validator
         $validator = Validator::make($request->all(),[
             'judul' => 'required|string|max:255',
             'isi_berita' => 'required|string|max:20000',
@@ -40,27 +37,25 @@ class BeritaDpmController extends Controller
             'tanggal_terbit' => 'nullable|date',
         ]);
 
-        //2. check validator eror
         if ($validator->fails()){
             return response()->json([
                 "success"=> false,
                 "message" => $validator->errors()
             ], 422);
         };
-        //3. upload image
-        $image = $request->file("foto_berita");
-        $image ->store('fotoBerita', 'public');
 
-        //4. insert data
+        $image = $request->file("foto_berita");
+        $image->store('fotoBerita', 'public');
+
         $beritadpm = BeritaDpm::create([
             "judul" => $request->judul,
+            "slug" => Str::slug($request->judul), // <-- Otomatis buat slug dari judul
             "isi_berita" => $request->isi_berita,
             "deskripsi_foto" => $request->deskripsi_foto,
             "foto_berita" => $image->hashName(),
             "tanggal_terbit" => $request->tanggal_terbit,
         ]);
 
-        //5. response
         return response()->json([
             "success"=> true,
             "message" => "resource add successfully!",
@@ -68,9 +63,12 @@ class BeritaDpmController extends Controller
         ],200);
     }
 
-    public function show(string $id)
+    public function show(string $identifier)
     {
-        $beritadpm = BeritaDpm::find($id);
+        // Ubah pencarian: Coba cari berdasarkan ID dulu, kalau tidak ada cari berdasarkan Slug
+        $beritadpm = BeritaDpm::where('id', $identifier)
+                              ->orWhere('slug', $identifier)
+                              ->first();
 
         if(!$beritadpm){
             return response()->json([
@@ -88,7 +86,6 @@ class BeritaDpmController extends Controller
 
     public function update(Request $request, string $id)
     {
-        //1, cari data
         $beritadpm = BeritaDpm::find($id);
         if(!$beritadpm){
             return response()->json([
@@ -96,7 +93,7 @@ class BeritaDpmController extends Controller
                 "messege" => "resource not found"
             ], 404);
         }
-        //2. validator
+
         $validator = Validator::make($request->all(),[
             'judul' => 'required|string|max:255',
             'isi_berita' => 'required|string|max:20000',
@@ -111,25 +108,25 @@ class BeritaDpmController extends Controller
                 "messege" => $validator->errors()
             ], 400);
         }
-        //3 siapkan data yang mau diupdate
+
         $data = [
             "judul" => $request->judul,
+            "slug" => Str::slug($request->judul), // <-- Update slug kalau judul berubah
             "isi_berita" => $request->isi_berita,
             "deskripsi_foto" => $request->deskripsi_foto,
             "tanggal_terbit" => $request->tanggal_terbit,
         ];
-        //4 handle image(uapload atau delete)
+
         if ($request->foto_berita){
             $image = $request->file('foto_berita');
             $image->store('fotoBerita', 'public');
-
 
             if($beritadpm->foto_berita){
                 Storage::disk('public')->delete('fotoBerita/'.$beritadpm->foto_berita);
             }
             $data['foto_berita'] =$image->hashName();
         }
-        //5, update data
+
         $beritadpm->update($data);
         return response()->json([
             "success" => true,
@@ -156,5 +153,17 @@ class BeritaDpmController extends Controller
             "success" => true,
             "messege" => "resourse deleted successfully",
         ]);
+    }
+
+    // ========================================================
+    // METHOD KHUSUS UNTUK WHATSAPP SHARE & OPEN GRAPH
+    // ========================================================
+    public function share($slug)
+    {
+        // Cari berita berdasarkan slug
+        $berita = BeritaDpm::where('slug', $slug)->firstOrFail();
+
+        // Panggil file view blade bernama "share_berita.blade.php"
+        return view('share_berita', compact('berita'));
     }
 }

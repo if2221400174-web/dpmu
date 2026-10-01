@@ -10,6 +10,7 @@ class BeritaDpm extends Model
 
     protected $fillable = [
         'judul',
+        'slug',
         'isi_berita',
         'deskripsi_foto',
         'foto_berita',
