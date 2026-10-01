@@ -95,12 +95,10 @@ export default function ShowBeritaDpm() {
   // SETUP SHARE LINK AJAIB (LARAVEL BACKEND)
   // =========================================================================
   
-  // ⚠️ GANTI INI dengan URL Backend Laravel kamu yang asli di Azure
-  const BACKEND_URL = "https://dpmu-backend-d2gbcvg8deh2egat.southeastasia-01.azurewebsites.net"; 
   
   // Kita buat link khusus yang mengarah ke Laravel agar gambar muncul di WA
   // Jika berita lama belum punya slug, kita pakai id sebagai cadangan
-  const rawShareUrl = berita ? `${BACKEND_URL}/share/informasi/${berita.slug || berita.id}` : "";
+  const rawShareUrl = berita ? `https://dpmunuja.id/informasi/${berita.slug || berita.id}` : "";
   const shareUrl = encodeURIComponent(rawShareUrl);
   const shareTitle = encodeURIComponent(berita?.judul || "Berita DPM UNUJA");
 
