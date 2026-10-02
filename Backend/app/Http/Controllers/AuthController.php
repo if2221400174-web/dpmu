@@ -8,167 +8,270 @@ use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
+// KEBUTUHAN KIRIM EMAIL & OTP
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache; // <--- WAJIB TAMBAH INI UNTUK OTP
+
 class AuthController extends Controller
 {
     public function login(Request $request){
-        //1. setup validator
         $validator = Validator::make($request->all(),[
             'email' => 'required|email',
             'password' => 'required'
         ]);
 
-        //2. cek validator
         if ($validator->fails()){
             return response()->json($validator->errors(),422);
         }
-        //3. get kredensial dari request
+
         $credentials = $request->only('email', 'password');
 
-        //4. cek isFailed
         if (!$token =auth()->guard('api')->attempt($credentials)){
             return response()->json([
                 'success' => false,
-                'message' => 'Email atau Pasword anda salah !'
+                'message' => 'Email atau Password anda salah !'
             ], 401);
         }
 
-        //5. cek is Success
+        $user = auth()->guard('api')->user();
+        if (is_null($user->email_verified_at)) {
+            auth()->guard('api')->logout();
+            return response()->json([
+                'success' => false,
+                'message' => 'Harap aktifkan/verifikasi email Anda terlebih dahulu!'
+            ], 401);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Login successfully',
-            'user' => auth()->guard('api')->user(),
-            'token' =>$token,
+            'user' => $user,
+            'token' => $token,
         ], 200);
     }
 
     public function logout(Request $request){
         try{
             JWTAuth::invalidate(JWTAuth::getToken());
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Logout successfully'
-            ], 200);
+            return response()->json(['success' => true, 'message' => 'Logout successfully'], 200);
         } catch (JWTException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Logout failed'
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'Logout failed'], 500);
         }
     }
 
-    //CRUD
     public function index() {
         $user = User::all();
-
         if($user->isEmpty()){
-            return response()->json([
-                "success"=>true,
-                "messege" => "resource data not found"
-            ], 200);
+            return response()->json(["success"=>true, "message" => "resource data not found"], 200);
         }
-
-        return response()->json([
-            "success"=> true,
-            "messege" => "Get all resource",
-            "data" => $user
-        ], 200);
+        return response()->json(["success"=> true, "message" => "Get all resource", "data" => $user], 200);
     }
 
+    // ==========================================
+    // 1. MEMBUAT USER BARU (KIRIM OTP)
+    // ==========================================
     public function store(Request $request){
         $validator = Validator::make($request->all(),[
-            "email" => "required|email|max:455",
+            "email" => "required|email|max:455|unique:users,email",
             "password" => "required|min:8"
+        ], [
+            'email.unique' => 'Gagal! Email ini sudah terdaftar di sistem.'
         ]);
 
         if($validator->fails()){
-            return response()->json([
-                "success"=>false,
-                "messege" => $validator->errors()
-            ], 400);
+            return response()->json(["success"=>false, "message" => $validator->errors()], 400);
         }
-        $user = User::create([
+
+        // BIKIN KODE OTP 6 DIGIT
+        $otp = rand(100000, 999999);
+
+        // SIMPAN KE MEMORI (CACHE) SELAMA 10 MENIT, JANGAN DISIMPAN KE DATABASE DULU!
+        $cacheKey = 'register_otp_' . $request->email;
+        Cache::put($cacheKey, [
             'email' => $request->email,
             'password' => bcrypt($request->password),
-            'role' => 'admin'
+            'role' => $request->role ?? 'user',
+            'otp' => $otp
+        ], now()->addMinutes(10));
 
+        // KIRIM EMAIL OTP
+        Mail::send([], [], function ($message) use ($request, $otp) {
+            $message->to($request->email)
+                    ->subject('Kode Verifikasi (OTP) - DPM UNUJA')
+                    ->html("
+                        <div style='font-family: Arial, sans-serif; text-align: center; padding: 20px;'>
+                            <h2>Kode Verifikasi Anda</h2>
+                            <p>Seseorang mencoba mendaftarkan email ini di sistem DPM UNUJA.</p>
+                            <p>Masukkan 6 digit kode berikut untuk menyelesaikan pendaftaran:</p>
+                            <h1 style='letter-spacing: 5px; color: #2563EB;'>{$otp}</h1>
+                            <p style='color: #666; font-size: 12px;'>Kode ini akan kedaluwarsa dalam 10 menit.</p>
+                        </div>
+                    ");
+        });
+
+        // KEMBALIKAN RESPONSE SUKSES MEMINTA OTP KE REACT
+        return response()->json([
+            "success" => true,
+            "message" => "Kode OTP telah dikirim ke email.",
+            "data" => ["email" => $request->email],
+            "require_otp" => true // Penanda buat React pindah halaman
+        ], 200);
+    }
+
+    // ==========================================
+    // 2. CEK OTP DAN SIMPAN USER KE DATABASE
+    // ==========================================
+    public function verifyOtpStore(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'otp' => 'required|numeric'
         ]);
+
+        $cacheKey = 'register_otp_' . $request->email;
+        $cachedData = Cache::get($cacheKey);
+
+        if (!$cachedData) {
+            return response()->json(['success' => false, 'message' => 'Kode OTP sudah kedaluwarsa atau email tidak ditemukan.'], 400);
+        }
+
+        if ((string)$cachedData['otp'] !== (string)$request->otp) {
+            return response()->json(['success' => false, 'message' => 'Kode OTP salah!'], 400);
+        }
+
+        // OTP BENAR! BARU KITA SIMPAN KE DATABASE
+        $user = User::create([
+            'email' => $cachedData['email'],
+            'password' => $cachedData['password'],
+            'role' => $cachedData['role'],
+        ]);
+
+        // LANGSUNG JADIKAN TERVERIFIKASI
+        $user->email_verified_at = Carbon::now();
+        $user->save();
+
+        // BERSIHKAN CACHE
+        Cache::forget($cacheKey);
 
         return response()->json([
             "success" => true,
-            "messege" => "resource created",
-            "data" => $user,
+            "message" => "Verifikasi berhasil! User telah ditambahkan.",
+            "data" => $user
         ], 201);
     }
 
-    //show
     public function show(string $id){
         $user = User::find($id);
-
-        if(!$user){
-            return response()->json([
-                "success"=>false,
-                "messege" => "resource not found"
-            ], 404);
-        }
-
-        return response()->json([
-            "success" => true,
-            "messege" => "Get resource",
-            "data" => $user
-        ]);
+        if(!$user) return response()->json(["success"=>false, "message" => "resource not found"], 404);
+        return response()->json(["success" => true, "message" => "Get resource", "data" => $user]);
     }
 
-    //update
+    // ==========================================
+    // 3. UPDATE USER (KIRIM OTP JIKA GANTI EMAIL)
+    // ==========================================
     public function update(Request $request, string $id){
-        //1, cari data
         $user = User::find($id);
-        if(!$user){
-            return response()->json([
-                "success"=>false,
-                "messege" => "resource not found"
-            ], 404);
-        }
-        //2. validator
+        if(!$user) return response()->json(["success"=>false, "message" => "resource not found"], 404);
+
         $validator = Validator::make($request->all(),[
-            "email" => "required|email|max:455",
-            "role" => "required|string|in:admin,member|max:100"
-        ]);
+            "email" => "required|email|max:455|unique:users,email," . $id,
+            "role" => "required|string|in:admin,user|max:100"
+        ], ['email.unique' => 'Gagal! Email ini sudah dipakai oleh user lain.']);
 
-        if($validator->fails()){
-            return response()->json([
-                "success"=>false,
-                "messege" => $validator->errors()
-            ], 400);
+        if($validator->fails()) return response()->json(["success"=>false, "message" => $validator->errors()], 400);
+
+        // Jika form mengirim password baru
+        $newPassword = $user->password;
+        if ($request->has('password') && !empty($request->password)) {
+            $newPassword = bcrypt($request->password);
         }
-        //3 siapkan data yang mau diupdate
-        $data = [
-            'email' => $request->email,
-            'role' => $request->role
-        ];
 
-        //4, update data
-        $user->update($data);
+        // JIKA EMAIL TIDAK BERUBAH, LANGSUNG SIMPAN TANPA OTP!
+        if ($user->email === $request->email && !is_null($user->email_verified_at)) {
+            $user->update([
+                'password' => $newPassword,
+                'role' => $request->role
+            ]);
+
+            return response()->json([
+                "success" => true,
+                "message" => "Data berhasil diperbarui tanpa perubahan email.",
+                "data" => $user
+            ], 200);
+        }
+
+        // JIKA EMAIL BERUBAH, JANGAN LANGSUNG DISIMPAN! BIKIN OTP DULU!
+        $otp = rand(100000, 999999);
+        $cacheKey = 'update_otp_' . $user->id;
+
+        Cache::put($cacheKey, [
+            'new_email' => $request->email,
+            'password' => $newPassword,
+            'role' => $request->role,
+            'otp' => $otp
+        ], now()->addMinutes(10));
+
+        Mail::send([], [], function ($message) use ($request, $otp) {
+            $message->to($request->email)
+                    ->subject('Konfirmasi Perubahan Email - DPM UNUJA')
+                    ->html("
+                        <div style='font-family: Arial, sans-serif; text-align: center; padding: 20px;'>
+                            <h2>Kode Verifikasi Email Baru</h2>
+                            <p>Seseorang mengedit data akun Anda. Masukkan 6 digit kode berikut untuk memverifikasi perubahan email:</p>
+                            <h1 style='letter-spacing: 5px; color: #2563EB;'>{$otp}</h1>
+                            <p style='color: #666; font-size: 12px;'>Kode ini akan kedaluwarsa dalam 10 menit.</p>
+                        </div>
+                    ");
+        });
+
         return response()->json([
             "success" => true,
-            "messege" => "resource updated",
+            "message" => "Kode OTP telah dikirim ke email baru. Silakan masukkan kode untuk merubah email.",
+            "require_otp" => true // Penanda buat React
+        ], 200);
+    }
+
+    // ==========================================
+    // 4. CEK OTP DAN PERBARUI EMAIL
+    // ==========================================
+    public function verifyOtpUpdate(Request $request, string $id)
+    {
+        $request->validate(['otp' => 'required|numeric']);
+        $user = User::find($id);
+
+        if(!$user) return response()->json(['success' => false, 'message' => 'User tidak ditemukan.'], 404);
+
+        $cacheKey = 'update_otp_' . $user->id;
+        $cachedData = Cache::get($cacheKey);
+
+        if (!$cachedData) return response()->json(['success' => false, 'message' => 'Kode OTP sudah kedaluwarsa.'], 400);
+
+        if ((string)$cachedData['otp'] !== (string)$request->otp) {
+            return response()->json(['success' => false, 'message' => 'Kode OTP salah!'], 400);
+        }
+
+        // OTP BENAR! SIMPAN PERUBAHAN KE DATABASE
+        $user->email = $cachedData['new_email'];
+        $user->password = $cachedData['password'];
+        $user->role = $cachedData['role'];
+        $user->email_verified_at = Carbon::now();
+        $user->save();
+
+        Cache::forget($cacheKey);
+
+        return response()->json([
+            "success" => true,
+            "message" => "Pembaruan berhasil disimpan!",
             "data" => $user
         ], 200);
     }
-     //delete
+
     public function destroy(string $id){
         $user = User::find($id);
-        if(!$user){
-            return response()->json([
-                "success"=>false,
-                "messege" => "resourse not found"
-            ], 404);
-        }
+        if(!$user) return response()->json(["success"=>false, "message" => "resourse not found"], 404);
         $user->delete();
-        return response() ->json([
-            "success" =>true,
-            "messege" => "resource deleted",
-            "data" => $user
-        ], 200);
+        return response() ->json(["success" =>true, "message" => "resource deleted", "data" => $user], 200);
     }
 }

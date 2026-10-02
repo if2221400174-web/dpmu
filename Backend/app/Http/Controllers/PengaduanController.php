@@ -6,6 +6,11 @@ use App\Models\Pengaduan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str; // <-- Ditambahkan untuk membuat nama file acak
+
+// Tambahan untuk kompresi gambar otomatis
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class PengaduanController extends Controller
 {
@@ -33,7 +38,7 @@ class PengaduanController extends Controller
             'prodi' => 'required|string|max:255',
             'fakultas' => 'required|string|max:255',
             'deskripsi_masalah' => 'required|string|max:2000',
-            'foto_bukti' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+            'foto_bukti' => 'required|image|mimes:jpeg,png,jpg|max:5120', // Bebas upload s.d 5MB
         ]);
 
         //2. check validator eror
@@ -43,16 +48,24 @@ class PengaduanController extends Controller
                 "message" => $validator->errors()
             ], 422);
         };
-        //3. upload image
+
+        //3. upload & kompres otomatis
         $image = $request->file("foto_bukti");
-        $image ->store('buktiPengaduan', 'public');
+        $filename = Str::random(40) . '.jpg'; // Paksa ekstensi .jpg
+
+        $manager = new ImageManager(new Driver());
+        $img = $manager->read($image);
+        $img->scaleDown(width: 1000); // Maksimal lebar 1000px agar ringan
+        $encoded = $img->toJpeg(60); // Kualitas 60% agar file sangat kecil
+
+        Storage::disk('public')->put('buktiPengaduan/' . $filename, $encoded->toString());
 
         //4. insert data
         $pengaduan = Pengaduan::create([
             "prodi" => $request->prodi,
             "fakultas" => $request->fakultas,
             "deskripsi_masalah" => $request->deskripsi_masalah,
-            "foto_bukti" => $image->hashName(),
+            "foto_bukti" => $filename,
         ]);
 
         //5. response
@@ -90,12 +103,13 @@ class PengaduanController extends Controller
                 "messege" => "resource not found"
             ], 404);
         }
+
         //2. validator
         $validator = Validator::make($request->all(),[
             'prodi' => 'required|string|max:255',
             'fakultas' => 'required|string|max:255',
             'deskripsi_masalah' => 'required|string|max:2000',
-            'foto_bukti' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'foto_bukti' => 'nullable|image|mimes:jpeg,png,jpg|max:5120', // Bebas upload s.d 5MB
         ]);
 
         if($validator->fails()){
@@ -104,23 +118,36 @@ class PengaduanController extends Controller
                 "messege" => $validator->errors()
             ], 400);
         }
+
         //3 siapkan data yang mau diupdate
         $data = [
             "prodi" => $request->prodi,
             "fakultas" => $request->fakultas,
             "deskripsi_masalah" => $request->deskripsi_masalah,
         ];
+
         //4 handle image(uapload atau delete)
         if ($request->foto_bukti){
             $image = $request->file('foto_bukti');
-            $image->store('buktiPengaduan', 'public');
 
-
+            // PERBAIKAN BUG: Hapus foto lama di folder 'buktiPengaduan' (sebelumnya salah nama folder)
             if($pengaduan->foto_bukti){
-                Storage::disk('public')->delete('pengaduans/'.$pengaduan->foto_bukti);
+                Storage::disk('public')->delete('buktiPengaduan/'.$pengaduan->foto_bukti);
             }
-            $data['foto_bukti'] =$image->hashName();
+
+            // Kompresi foto baru
+            $filename = Str::random(40) . '.jpg';
+
+            $manager = new ImageManager(new Driver());
+            $img = $manager->read($image);
+            $img->scaleDown(width: 1000);
+            $encoded = $img->toJpeg(60);
+
+            Storage::disk('public')->put('buktiPengaduan/' . $filename, $encoded->toString());
+
+            $data['foto_bukti'] = $filename;
         }
+
         //5, update data
         $pengaduan->update($data);
         return response()->json([
@@ -129,6 +156,7 @@ class PengaduanController extends Controller
             "data" => $pengaduan
         ], 200);
     }
+
     public function destroy(string $id)
     {
         $pengaduan = Pengaduan::find($id);
@@ -138,11 +166,13 @@ class PengaduanController extends Controller
                 "messege" => "resourse not found",
             ]);
         }
-        if ($pengaduan ->foto_bukti){
-            Storage::disk('public')->delete('pengaduans/'.$pengaduan->foto_bukti);
+
+        // PERBAIKAN BUG: Hapus foto di folder yang benar
+        if ($pengaduan->foto_bukti){
+            Storage::disk('public')->delete('buktiPengaduan/'.$pengaduan->foto_bukti);
         }
 
-        $pengaduan ->delete();
+        $pengaduan->delete();
         return response()->json([
             "success" => true,
             "messege" => "resourse deleted successfully",

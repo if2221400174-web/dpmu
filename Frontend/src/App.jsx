@@ -1,6 +1,9 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom"
+import { useEffect } from "react"
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom"
 
 import Login from "./pages/auth/login"
+
+
 import AdminLayout from "./layouts/admin"
 import Dashboard from "./pages/admin"
 import Home from "./pages/public"
@@ -39,12 +42,32 @@ import PublikAspirasi from "./pages/public/pengaduan/formaspirasi"
 import PublikBeritaDpm from "./pages/public/beritadpm"
 import ShowBeritaDpm from "./pages/public/beritadpm/show"
 import PublikProfil from "./pages/public/profil"
+import ForgotPassword from "./pages/auth/ForgotPassword"
+import ResetPassword from "./pages/auth/ResetPassword"
+
+// ==========================================
+// 1. KOMPONEN SCROLL TO TOP DITAMBAHKAN DI SINI
+// ==========================================
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+// ==========================================
 
 function App() {
 
   return (
     <>
       <BrowserRouter>
+      
+      {/* 2. PANGGIL KOMPONENNYA DI SINI */}
+      <ScrollToTop />
+
       <Routes>
         {/* Public */}
         <Route element={<PublicLayout/>}>
@@ -63,6 +86,8 @@ function App() {
 
         {/* Auth */}
         <Route path="/login" element={<Login/>}/>
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />  
 
         {/* admin */}
         <Route path="admin" element={<AdminLayout/>}>

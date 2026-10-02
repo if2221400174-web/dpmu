@@ -1,7 +1,6 @@
 import { useJwt } from "react-jwt";
 import API from "../_api"
 
-
 export const login = async ({email, password}) => {
   try {
     const{data} = await API.post("/login", {email, password})
@@ -28,7 +27,6 @@ export const logout = async (token) => {
     throw error;
   }
 };
-
 
 // untuk mengecek token
 export const useDecodeToken = (token) => {
@@ -72,6 +70,19 @@ export const userCreate = async (data) => {
   }
 }
 
+// ==========================================
+// FUNGSI BARU: MENGIRIM OTP CREATE
+// ==========================================
+export const verifyOtpCreate = async (data) => {
+  try {
+    const response = await API.post("/users/verify-otp", data);
+    return response.data;
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+};
+
 export const updateUser = async (id, data) => {
   try {
     const response = await API.post(`/users/${id}`, data) 
@@ -82,6 +93,18 @@ export const updateUser = async (id, data) => {
   }
 }
 
+// ==========================================
+// FUNGSI BARU: MENGIRIM OTP UPDATE
+// ==========================================
+export const verifyOtpUpdate = async (id, data) => {
+  try {
+    const response = await API.post(`/users/${id}/verify-otp`, data);
+    return response.data;
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+};
 
 export const deleteUsers = async (id)=>{
   try {

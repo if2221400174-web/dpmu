@@ -8,6 +8,10 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str; // <-- Ditambahkan untuk fitur Slug
 
+// Tambahan untuk kompresi gambar otomatis
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
+
 class BeritaDpmController extends Controller
 {
     public function index()
@@ -33,7 +37,7 @@ class BeritaDpmController extends Controller
             'judul' => 'required|string|max:255',
             'isi_berita' => 'required|string|max:20000',
             'deskripsi_foto' => 'required|string|max:2000',
-            'foto_berita' => 'required|image|mimes:jpeg,png,JPG|max:2048',
+            'foto_berita' => 'required|image|mimes:jpeg,png,jpg,JPG|max:5120', // Batas upload diperbesar ke 5MB
             'tanggal_terbit' => 'nullable|date',
         ]);
 
@@ -44,15 +48,23 @@ class BeritaDpmController extends Controller
             ], 422);
         };
 
+        // PROSES KOMPRESI GAMBAR
         $image = $request->file("foto_berita");
-        $image->store('fotoBerita', 'public');
+        $filename = Str::random(40) . '.jpg'; // Paksa ekstensi jadi .jpg agar seragam dan aman
+
+        $manager = new ImageManager(new Driver());
+        $img = $manager->read($image);
+        $img->scaleDown(width: 1000); // Maksimal lebar 1000px
+        $encoded = $img->toJpeg(60); // Kualitas 60% agar file sangat kecil (di bawah 100KB)
+
+        Storage::disk('public')->put('fotoBerita/' . $filename, $encoded->toString());
 
         $beritadpm = BeritaDpm::create([
             "judul" => $request->judul,
             "slug" => Str::slug($request->judul), // <-- Otomatis buat slug dari judul
             "isi_berita" => $request->isi_berita,
             "deskripsi_foto" => $request->deskripsi_foto,
-            "foto_berita" => $image->hashName(),
+            "foto_berita" => $filename,
             "tanggal_terbit" => $request->tanggal_terbit,
         ]);
 
@@ -98,7 +110,7 @@ class BeritaDpmController extends Controller
             'judul' => 'required|string|max:255',
             'isi_berita' => 'required|string|max:20000',
             'deskripsi_foto' => 'required|string|max:2000',
-            'foto_berita' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'foto_berita' => 'nullable|image|mimes:jpeg,png,jpg,JPG|max:5120', // Batas upload diperbesar ke 5MB
             'tanggal_terbit' => 'nullable|date',
         ]);
 
@@ -119,12 +131,23 @@ class BeritaDpmController extends Controller
 
         if ($request->foto_berita){
             $image = $request->file('foto_berita');
-            $image->store('fotoBerita', 'public');
 
+            // Hapus foto lama jika ada
             if($beritadpm->foto_berita){
                 Storage::disk('public')->delete('fotoBerita/'.$beritadpm->foto_berita);
             }
-            $data['foto_berita'] =$image->hashName();
+
+            // PROSES KOMPRESI GAMBAR BARU
+            $filename = Str::random(40) . '.jpg';
+
+            $manager = new ImageManager(new Driver());
+            $img = $manager->read($image);
+            $img->scaleDown(width: 1000);
+            $encoded = $img->toJpeg(60);
+
+            Storage::disk('public')->put('fotoBerita/' . $filename, $encoded->toString());
+
+            $data['foto_berita'] = $filename;
         }
 
         $beritadpm->update($data);

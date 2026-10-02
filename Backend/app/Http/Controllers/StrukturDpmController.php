@@ -6,6 +6,11 @@ use App\Models\StrukturDpm;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str; // <-- Ditambahkan untuk nama file unik
+
+// Tambahan untuk kompresi gambar otomatis
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class StrukturDpmController extends Controller
 {
@@ -36,7 +41,7 @@ class StrukturDpmController extends Controller
         $validator = Validator::make($request->all(),[
             'nama' => 'required|string|max:255',
             'jabatan' => 'required|string|max:2000',
-            'foto' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+            'foto' => 'required|image|mimes:jpeg,png,jpg|max:5120', // Batas upload diperbesar s.d 5MB
         ]);
 
         //2. check validator eror
@@ -46,15 +51,23 @@ class StrukturDpmController extends Controller
                 "message" => $validator->errors()
             ], 422);
         };
-        //3. upload image
+
+        //3. upload & kompres otomatis
         $image = $request->file("foto");
-        $image ->store('fotoStruktur', 'public');
+        $filename = Str::random(40) . '.jpg'; // Paksa ekstensi .jpg
+
+        $manager = new ImageManager(new Driver());
+        $img = $manager->read($image);
+        $img->scaleDown(width: 800); // Maksimal lebar 800px (ideal untuk foto profil)
+        $encoded = $img->toJpeg(60); // Kualitas 60%
+
+        Storage::disk('public')->put('fotoStruktur/' . $filename, $encoded->toString());
 
         //4. insert data
         $strukturdpm = StrukturDpm::create([
             "nama" => $request->nama,
             "jabatan" => $request->jabatan,
-            "foto" => $image->hashName(),
+            "foto" => $filename,
         ]);
 
         //5. response
@@ -85,6 +98,7 @@ class StrukturDpmController extends Controller
             "data" => $strukturdpm
         ]);
     }
+
     public function update(Request $request, string $id)
     {
         //1, cari data
@@ -95,11 +109,12 @@ class StrukturDpmController extends Controller
                 "messege" => "resource not found"
             ], 404);
         }
+
         //2. validator
         $validator = Validator::make($request->all(),[
             'nama' => 'required|string|max:255',
             'jabatan' => 'required|string|max:2000',
-            'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:5120', // Batas upload diperbesar s.d 5MB
         ]);
 
         if($validator->fails()){
@@ -108,22 +123,35 @@ class StrukturDpmController extends Controller
                 "messege" => $validator->errors()
             ], 400);
         }
+
         //3 siapkan data yang mau diupdate
         $data = [
             "nama" => $request->nama,
             "jabatan" => $request->jabatan,
         ];
+
         //4 handle image(uapload atau delete)
         if ($request->foto){
             $image = $request->file('foto');
-            $image->store('fotoStruktur', 'public');
 
-
+            // Hapus foto lama jika ada
             if($strukturdpm->foto){
                 Storage::disk('public')->delete('fotoStruktur/'.$strukturdpm->foto);
             }
-            $data['foto'] =$image->hashName();
+
+            // Kompresi foto baru
+            $filename = Str::random(40) . '.jpg';
+
+            $manager = new ImageManager(new Driver());
+            $img = $manager->read($image);
+            $img->scaleDown(width: 800);
+            $encoded = $img->toJpeg(60);
+
+            Storage::disk('public')->put('fotoStruktur/' . $filename, $encoded->toString());
+
+            $data['foto'] = $filename;
         }
+
         //5, update data
         $strukturdpm->update($data);
         return response()->json([
@@ -142,6 +170,7 @@ class StrukturDpmController extends Controller
                 "messege" => "resourse not found",
             ]);
         }
+
         if ($strukturdpm->foto){
             Storage::disk('public')->delete('fotoStruktur/'.$strukturdpm->foto);
         }

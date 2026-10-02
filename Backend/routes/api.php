@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Route;
 // ─── Auth ───────────────────────────────────────────────
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api', 'role:admin');
+Route::get('/verify-email', [AuthController::class, 'verifyEmail']);
+
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -47,5 +49,9 @@ Route::middleware(['auth:api', 'role:admin'])->group(function () {
     Route::apiResource('/beritadpms',    BeritaDpmController::class)->only(['store', 'update', 'destroy']);
     Route::apiResource('/strukturdpms',  StrukturDpmController::class)->only(['store', 'update', 'destroy']);
     Route::apiResource('/keputusans',    KeputusanController::class)->only(['store', 'update', 'destroy']);
+
+    // ─── API Users & Verifikasi OTP
     Route::apiResource('/users',         AuthController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
+    Route::post('/users/verify-otp',     [AuthController::class, 'verifyOtpStore']); // <-- Rute Baru
+    Route::post('/users/{id}/verify-otp',[AuthController::class, 'verifyOtpUpdate']); // <-- Rute Baru
 });
