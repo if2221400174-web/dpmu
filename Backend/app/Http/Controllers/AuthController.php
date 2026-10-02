@@ -12,7 +12,7 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Cache; // <--- WAJIB TAMBAH INI UNTUK OTP
+use Illuminate\Support\Facades\Cache;
 
 class AuthController extends Controller
 {
@@ -36,7 +36,11 @@ class AuthController extends Controller
         }
 
         $user = auth()->guard('api')->user();
-        if (is_null($user->email_verified_at)) {
+
+        // =======================================================
+        // JALUR VIP: Akun mohdzikrillah03@gmail.com kebal blokir
+        // =======================================================
+        if (is_null($user->email_verified_at) && $user->email !== 'mohdzikrillah03@gmail.com') {
             auth()->guard('api')->logout();
             return response()->json([
                 'success' => false,
@@ -87,7 +91,7 @@ class AuthController extends Controller
         // BIKIN KODE OTP 6 DIGIT
         $otp = rand(100000, 999999);
 
-        // SIMPAN KE MEMORI (CACHE) SELAMA 10 MENIT, JANGAN DISIMPAN KE DATABASE DULU!
+        // SIMPAN KE MEMORI (CACHE) SELAMA 10 MENIT
         $cacheKey = 'register_otp_' . $request->email;
         Cache::put($cacheKey, [
             'email' => $request->email,
@@ -111,12 +115,11 @@ class AuthController extends Controller
                     ");
         });
 
-        // KEMBALIKAN RESPONSE SUKSES MEMINTA OTP KE REACT
         return response()->json([
             "success" => true,
             "message" => "Kode OTP telah dikirim ke email.",
             "data" => ["email" => $request->email],
-            "require_otp" => true // Penanda buat React pindah halaman
+            "require_otp" => true
         ], 200);
     }
 
@@ -141,18 +144,15 @@ class AuthController extends Controller
             return response()->json(['success' => false, 'message' => 'Kode OTP salah!'], 400);
         }
 
-        // OTP BENAR! BARU KITA SIMPAN KE DATABASE
         $user = User::create([
             'email' => $cachedData['email'],
             'password' => $cachedData['password'],
             'role' => $cachedData['role'],
         ]);
 
-        // LANGSUNG JADIKAN TERVERIFIKASI
         $user->email_verified_at = Carbon::now();
         $user->save();
 
-        // BERSIHKAN CACHE
         Cache::forget($cacheKey);
 
         return response()->json([
@@ -182,13 +182,11 @@ class AuthController extends Controller
 
         if($validator->fails()) return response()->json(["success"=>false, "message" => $validator->errors()], 400);
 
-        // Jika form mengirim password baru
         $newPassword = $user->password;
         if ($request->has('password') && !empty($request->password)) {
             $newPassword = bcrypt($request->password);
         }
 
-        // JIKA EMAIL TIDAK BERUBAH, LANGSUNG SIMPAN TANPA OTP!
         if ($user->email === $request->email && !is_null($user->email_verified_at)) {
             $user->update([
                 'password' => $newPassword,
@@ -202,7 +200,6 @@ class AuthController extends Controller
             ], 200);
         }
 
-        // JIKA EMAIL BERUBAH, JANGAN LANGSUNG DISIMPAN! BIKIN OTP DULU!
         $otp = rand(100000, 999999);
         $cacheKey = 'update_otp_' . $user->id;
 
@@ -229,7 +226,7 @@ class AuthController extends Controller
         return response()->json([
             "success" => true,
             "message" => "Kode OTP telah dikirim ke email baru. Silakan masukkan kode untuk merubah email.",
-            "require_otp" => true // Penanda buat React
+            "require_otp" => true
         ], 200);
     }
 
@@ -252,7 +249,6 @@ class AuthController extends Controller
             return response()->json(['success' => false, 'message' => 'Kode OTP salah!'], 400);
         }
 
-        // OTP BENAR! SIMPAN PERUBAHAN KE DATABASE
         $user->email = $cachedData['new_email'];
         $user->password = $cachedData['password'];
         $user->role = $cachedData['role'];
