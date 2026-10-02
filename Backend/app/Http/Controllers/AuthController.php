@@ -8,9 +8,7 @@ use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
-// KEBUTUHAN KIRIM EMAIL & OTP
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
@@ -37,9 +35,7 @@ class AuthController extends Controller
 
         $user = auth()->guard('api')->user();
 
-        // =======================================================
-        // JALUR VIP: Akun mohdzikrillah03@gmail.com kebal blokir
-        // =======================================================
+        // JALUR VIP ADMIN
         if (is_null($user->email_verified_at) && $user->email !== 'mohdzikrillah03@gmail.com') {
             auth()->guard('api')->logout();
             return response()->json([
@@ -73,26 +69,19 @@ class AuthController extends Controller
         return response()->json(["success"=> true, "message" => "Get all resource", "data" => $user], 200);
     }
 
-    // ==========================================
-    // 1. MEMBUAT USER BARU (KIRIM OTP)
-    // ==========================================
     public function store(Request $request){
         $validator = Validator::make($request->all(),[
             "email" => "required|email|max:455|unique:users,email",
             "password" => "required|min:8"
-        ], [
-            'email.unique' => 'Gagal! Email ini sudah terdaftar di sistem.'
-        ]);
+        ], ['email.unique' => 'Gagal! Email ini sudah terdaftar di sistem.']);
 
         if($validator->fails()){
             return response()->json(["success"=>false, "message" => $validator->errors()], 400);
         }
 
-        // BIKIN KODE OTP 6 DIGIT
         $otp = rand(100000, 999999);
-
-        // SIMPAN KE MEMORI (CACHE) SELAMA 10 MENIT
         $cacheKey = 'register_otp_' . $request->email;
+
         Cache::put($cacheKey, [
             'email' => $request->email,
             'password' => bcrypt($request->password),
@@ -100,32 +89,38 @@ class AuthController extends Controller
             'otp' => $otp
         ], now()->addMinutes(10));
 
-        // KIRIM EMAIL OTP
-        Mail::send([], [], function ($message) use ($request, $otp) {
-            $message->to($request->email)
-                    ->subject('Kode Verifikasi (OTP) - DPM UNUJA')
-                    ->html("
-                        <div style='font-family: Arial, sans-serif; text-align: center; padding: 20px;'>
-                            <h2>Kode Verifikasi Anda</h2>
-                            <p>Seseorang mencoba mendaftarkan email ini di sistem DPM UNUJA.</p>
-                            <p>Masukkan 6 digit kode berikut untuk menyelesaikan pendaftaran:</p>
-                            <h1 style='letter-spacing: 5px; color: #2563EB;'>{$otp}</h1>
-                            <p style='color: #666; font-size: 12px;'>Kode ini akan kedaluwarsa dalam 10 menit.</p>
-                        </div>
-                    ");
-        });
+        // PENJEBAK ERROR EMAIL
+        try {
+            Mail::send([], [], function ($message) use ($request, $otp) {
+                $message->to($request->email)
+                        ->subject('Kode Verifikasi (OTP) - DPM UNUJA')
+                        ->html("
+                            <div style='font-family: Arial, sans-serif; text-align: center; padding: 20px;'>
+                                <h2>Kode Verifikasi Anda</h2>
+                                <p>Seseorang mencoba mendaftarkan email ini di sistem DPM UNUJA.</p>
+                                <p>Masukkan 6 digit kode berikut untuk menyelesaikan pendaftaran:</p>
+                                <h1 style='letter-spacing: 5px; color: #2563EB;'>{$otp}</h1>
+                                <p style='color: #666; font-size: 12px;'>Kode ini akan kedaluwarsa dalam 10 menit.</p>
+                            </div>
+                        ");
+            });
+        } catch (\Exception $e) {
+            Cache::forget($cacheKey);
+            return response()->json([
+                "success" => false,
+                "message" => "Gagal mengirim email SMTP: " . $e->getMessage()
+            ], 500);
+        }
 
         return response()->json([
             "success" => true,
             "message" => "Kode OTP telah dikirim ke email.",
             "data" => ["email" => $request->email],
+            "debug_otp" => $otp, // KODE RAHASIA JIKA EMAIL TIDAK MASUK
             "require_otp" => true
         ], 200);
     }
 
-    // ==========================================
-    // 2. CEK OTP DAN SIMPAN USER KE DATABASE
-    // ==========================================
     public function verifyOtpStore(Request $request)
     {
         $request->validate([
@@ -136,9 +131,7 @@ class AuthController extends Controller
         $cacheKey = 'register_otp_' . $request->email;
         $cachedData = Cache::get($cacheKey);
 
-        if (!$cachedData) {
-            return response()->json(['success' => false, 'message' => 'Kode OTP sudah kedaluwarsa atau email tidak ditemukan.'], 400);
-        }
+        if (!$cachedData) return response()->json(['success' => false, 'message' => 'Kode OTP sudah kedaluwarsa atau email tidak ditemukan.'], 400);
 
         if ((string)$cachedData['otp'] !== (string)$request->otp) {
             return response()->json(['success' => false, 'message' => 'Kode OTP salah!'], 400);
@@ -152,14 +145,9 @@ class AuthController extends Controller
 
         $user->email_verified_at = Carbon::now();
         $user->save();
-
         Cache::forget($cacheKey);
 
-        return response()->json([
-            "success" => true,
-            "message" => "Verifikasi berhasil! User telah ditambahkan.",
-            "data" => $user
-        ], 201);
+        return response()->json(["success" => true, "message" => "Verifikasi berhasil! User telah ditambahkan.", "data" => $user], 201);
     }
 
     public function show(string $id){
@@ -168,9 +156,6 @@ class AuthController extends Controller
         return response()->json(["success" => true, "message" => "Get resource", "data" => $user]);
     }
 
-    // ==========================================
-    // 3. UPDATE USER (KIRIM OTP JIKA GANTI EMAIL)
-    // ==========================================
     public function update(Request $request, string $id){
         $user = User::find($id);
         if(!$user) return response()->json(["success"=>false, "message" => "resource not found"], 404);
@@ -188,16 +173,8 @@ class AuthController extends Controller
         }
 
         if ($user->email === $request->email && !is_null($user->email_verified_at)) {
-            $user->update([
-                'password' => $newPassword,
-                'role' => $request->role
-            ]);
-
-            return response()->json([
-                "success" => true,
-                "message" => "Data berhasil diperbarui tanpa perubahan email.",
-                "data" => $user
-            ], 200);
+            $user->update(['password' => $newPassword, 'role' => $request->role]);
+            return response()->json(["success" => true, "message" => "Data berhasil diperbarui tanpa perubahan email.", "data" => $user], 200);
         }
 
         $otp = rand(100000, 999999);
@@ -210,29 +187,36 @@ class AuthController extends Controller
             'otp' => $otp
         ], now()->addMinutes(10));
 
-        Mail::send([], [], function ($message) use ($request, $otp) {
-            $message->to($request->email)
-                    ->subject('Konfirmasi Perubahan Email - DPM UNUJA')
-                    ->html("
-                        <div style='font-family: Arial, sans-serif; text-align: center; padding: 20px;'>
-                            <h2>Kode Verifikasi Email Baru</h2>
-                            <p>Seseorang mengedit data akun Anda. Masukkan 6 digit kode berikut untuk memverifikasi perubahan email:</p>
-                            <h1 style='letter-spacing: 5px; color: #2563EB;'>{$otp}</h1>
-                            <p style='color: #666; font-size: 12px;'>Kode ini akan kedaluwarsa dalam 10 menit.</p>
-                        </div>
-                    ");
-        });
+        // PENJEBAK ERROR EMAIL UPDATE
+        try {
+            Mail::send([], [], function ($message) use ($request, $otp) {
+                $message->to($request->email)
+                        ->subject('Konfirmasi Perubahan Email - DPM UNUJA')
+                        ->html("
+                            <div style='font-family: Arial, sans-serif; text-align: center; padding: 20px;'>
+                                <h2>Kode Verifikasi Email Baru</h2>
+                                <p>Seseorang mengedit data akun Anda. Masukkan 6 digit kode berikut untuk memverifikasi perubahan email:</p>
+                                <h1 style='letter-spacing: 5px; color: #2563EB;'>{$otp}</h1>
+                                <p style='color: #666; font-size: 12px;'>Kode ini akan kedaluwarsa dalam 10 menit.</p>
+                            </div>
+                        ");
+            });
+        } catch (\Exception $e) {
+            Cache::forget($cacheKey);
+            return response()->json([
+                "success" => false,
+                "message" => "Gagal mengirim email SMTP: " . $e->getMessage()
+            ], 500);
+        }
 
         return response()->json([
             "success" => true,
-            "message" => "Kode OTP telah dikirim ke email baru. Silakan masukkan kode untuk merubah email.",
+            "message" => "Kode OTP telah dikirim ke email baru.",
+            "debug_otp" => $otp, // KODE RAHASIA
             "require_otp" => true
         ], 200);
     }
 
-    // ==========================================
-    // 4. CEK OTP DAN PERBARUI EMAIL
-    // ==========================================
     public function verifyOtpUpdate(Request $request, string $id)
     {
         $request->validate(['otp' => 'required|numeric']);
@@ -254,14 +238,9 @@ class AuthController extends Controller
         $user->role = $cachedData['role'];
         $user->email_verified_at = Carbon::now();
         $user->save();
-
         Cache::forget($cacheKey);
 
-        return response()->json([
-            "success" => true,
-            "message" => "Pembaruan berhasil disimpan!",
-            "data" => $user
-        ], 200);
+        return response()->json(["success" => true, "message" => "Pembaruan berhasil disimpan!", "data" => $user], 200);
     }
 
     public function destroy(string $id){
