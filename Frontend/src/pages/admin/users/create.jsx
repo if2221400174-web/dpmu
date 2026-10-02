@@ -6,7 +6,7 @@ export default function CreateUser() {
   const [formData, setFormdata] = useState({
     email: "",
     password: "",
-    role: "user", // Default role
+    role: "admin", // Default role
   });
   
   const [showPassword, setShowPassword] = useState(false);
@@ -81,7 +81,7 @@ export default function CreateUser() {
   };
 
   const handleReset = () => {
-    setFormdata({ email: "", password: "", role: "user" });
+    setFormdata({ email: "", password: "", role: "admin" });
     setShowPassword(false);
     setSuccessMessage("");
     setStep(1);

@@ -8,7 +8,7 @@ export default function EditUser() {
   const [formData, setFormdata] = useState({
     email: "",
     password: "",
-    role: "user",
+    role: "admin",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [updatePassword, setUpdatePassword] = useState(false);
@@ -29,7 +29,7 @@ export default function EditUser() {
         setFormdata({
           email: UserData.data.email,
           password: "",
-          role: UserData.data.role || "user",
+          role: UserData.data.role || "admin",
           _method: "PUT",
         });
 
