@@ -130,9 +130,6 @@ export default function HeroSection() {
     ? searchResults.informasi.length + searchResults.produkHukum.length + searchResults.keputusan.length
     : 0;
 
-  // ── CSS offset helpers ────────────────────────────
-  // current slide: slides out; next slide: comes in
-
   return (
     <>
       <style>{`
@@ -303,9 +300,9 @@ export default function HeroSection() {
             />
           )}
 
-          {/* Gradient overlay */}
+          {/* Gradient overlay untuk Background Utama */}
           <div
-            className="absolute inset-0 bg-gradient-to-t from-blue-950/90 via-blue-950/40 to-transparent"
+            className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-80"
             style={{ zIndex: 5 }}
           />
 
@@ -336,7 +333,7 @@ export default function HeroSection() {
           {/* ── Content ── */}
           <div
             className="relative w-full max-w-4xl mx-auto px-4 sm:px-8 text-center py-14 sm:py-20 pb-16"
-            style={{ zIndex: 5 }}
+            style={{ zIndex: 10 }}
           >
             <h1
               className="fade-up text-white font-serif leading-tight tracking-wide drop-shadow-2xl mb-3"
@@ -380,7 +377,7 @@ export default function HeroSection() {
           </div>
 
           {/* Running text */}
-          <div className="absolute bottom-0 left-0 right-0 bg-blue-900/95 py-2" style={{ zIndex: 5 }}>
+          <div className="absolute bottom-0 left-0 right-0 bg-blue-900/95 py-2" style={{ zIndex: 15 }}>
             <div className="marquee-outer">
               <div className="marquee-track">
                 {[0, 1].map((i) => (
@@ -413,26 +410,34 @@ export default function HeroSection() {
                     to={`/informasi/${card.id}`}
                     className="group relative overflow-hidden rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
                   >
+                    {/* Frame Foto */}
                     <div className="relative overflow-hidden bg-gray-200" style={{ paddingBottom: "133%" }}>
                       <img
                         src={`${beritaImageStorage}/${card.foto_berita}`}
                         alt={card.judul}
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 z-0"
                         onError={(e) => {
                           e.target.src = `https://placehold.co/300x400/1e3a8a/FFFFFF?text=${encodeURIComponent(card.judul)}`;
                         }}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-blue-950/90 via-blue-900/40 to-transparent" />
-                      <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
+                      
+                      {/* LAPISAN 1: Bayangan Gelap Standar (Lebih Pekat) */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-90 z-10" />
+                      
+                      {/* LAPISAN 2: Teks dengan Shadow Kuat */}
+                      <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 z-20">
                         <h3
-                          className="text-white font-bold leading-snug line-clamp-3"
-                          style={{ fontSize: "clamp(0.75rem, 1.6vw, 1rem)" }}
+                          className="text-white font-bold leading-snug line-clamp-3 drop-shadow-md"
+                          style={{ 
+                            fontSize: "clamp(0.75rem, 1.6vw, 1rem)",
+                            textShadow: "0px 2px 4px rgba(0,0,0,0.8)" // Jaminan mutu anti-silau
+                          }}
                         >
                           {card.judul}
                         </h3>
                       </div>
                     </div>
-                    <div className="absolute inset-0 border-2 border-transparent group-hover:border-blue-400 rounded-2xl transition-colors duration-300 pointer-events-none" />
+                    <div className="absolute inset-0 border-2 border-transparent group-hover:border-blue-400 rounded-2xl transition-colors duration-300 pointer-events-none z-30" />
                   </Link>
                 ))
               ) : (
