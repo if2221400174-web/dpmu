@@ -11,6 +11,7 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str; // TAMBAHAN UNTUK TOKEN LUPA PASSWORD
 
 class AuthController extends Controller
 {
@@ -266,5 +267,80 @@ class AuthController extends Controller
         if(!$user) return response()->json(["success"=>false, "message" => "resourse not found"], 404);
         $user->delete();
         return response() ->json(["success" =>true, "message" => "resource deleted", "data" => $user], 200);
+    }
+
+    // ==============================================================
+    // FITUR LUPA PASSWORD & RESET PASSWORD
+    // ==============================================================
+
+    public function forgotPassword(Request $request){
+        config(['mail.default' => 'smtp']); // Obat sakti Azure
+
+        // SATPAM PENJAGA: Tolak jika email sembarangan / tidak ada di database
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|exists:users,email'
+        ], [
+            'email.exists' => 'Gagal! Akun dengan email ini tidak ditemukan di sistem.'
+        ]);
+
+        if($validator->fails()) return response()->json(["success"=>false, "message" => $validator->errors()->first('email')], 400);
+
+        // Buat Token Acak Rahasia
+        $token = Str::random(60);
+        $email = $request->email;
+        $cacheKey = 'reset_password_' . $email;
+
+        // Simpan token ke memori selama 15 menit
+        Cache::put($cacheKey, $token, now()->addMinutes(15));
+
+        // Buat Link Reset yang mengarah ke Frontend React
+        $resetLink = "https://dpmunuja.id/reset-password?token={$token}&email={$email}";
+
+        try {
+            Mail::send([], [], function ($message) use ($email, $resetLink) {
+                $message->to($email)
+                        ->subject('Link Reset Password - DPM UNUJA')
+                        ->html("
+                            <div style='font-family: Arial, sans-serif; text-align: center; padding: 20px;'>
+                                <h2>Reset Password Anda</h2>
+                                <p>Kami menerima permintaan untuk mereset password akun DPM UNUJA Anda.</p>
+                                <p>Silakan klik tombol di bawah ini untuk membuat password baru:</p>
+                                <a href='{$resetLink}' style='background-color: #2563EB; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block; margin-top: 15px; font-weight: bold;'>Reset Password Sekarang</a>
+                                <p style='margin-top: 20px; font-size: 12px; color: #666;'>Atau copy-paste link berikut ke browser Anda: <br><a href='{$resetLink}' style='color: #2563EB;'>{$resetLink}</a></p>
+                                <p style='margin-top: 20px; font-size: 12px; color: #666;'>Link ini akan kedaluwarsa dalam 15 menit. Jika Anda tidak merasa meminta reset, abaikan saja email ini.</p>
+                            </div>
+                        ");
+            });
+        } catch (\Exception $e) {
+            Cache::forget($cacheKey);
+            return response()->json(["success" => false, "message" => "Gagal mengirim email reset."], 500);
+        }
+
+        return response()->json(["success" => true, "message" => "Link reset password telah dikirim ke email Anda!"], 200);
+    }
+
+    public function resetPassword(Request $request){
+        $request->validate([
+            'email' => 'required|email',
+            'token' => 'required|string',
+            'password' => 'required|min:8'
+        ]);
+
+        $cacheKey = 'reset_password_' . $request->email;
+        $cachedToken = Cache::get($cacheKey);
+
+        if (!$cachedToken || $cachedToken !== $request->token) {
+            return response()->json(['success' => false, 'message' => 'Link reset sudah kedaluwarsa atau tidak valid. Silakan ulangi proses lupa password dari awal.'], 400);
+        }
+
+        $user = User::where('email', $request->email)->first();
+        if(!$user) return response()->json(['success' => false, 'message' => 'User tidak ditemukan.'], 404);
+
+        $user->password = bcrypt($request->password);
+        $user->save();
+
+        Cache::forget($cacheKey); // Hapus token agar tidak bisa dipakai 2x
+
+        return response()->json(["success" => true, "message" => "Password berhasil diperbarui! Silakan login dengan password baru."], 200);
     }
 }

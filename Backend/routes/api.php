@@ -16,6 +16,10 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api', 'role:admin');
 Route::get('/verify-email', [AuthController::class, 'verifyEmail']);
 
+// RUTE BARU UNTUK LUPA PASSWORD (AKSES PUBLIK)
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+
 
 Route::get('/user', function (Request $request) {
     return $request->user();
