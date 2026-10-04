@@ -72,8 +72,8 @@ class AuthController extends Controller
     public function store(Request $request){
         // OBAT SAKTI: PAKSA AZURE MENGGUNAKAN SMTP LEWAT KODE
         config(['mail.default' => 'smtp']);
-        \Illuminate\Support\Facades\Artisan::call('config:clear');
-        \Illuminate\Support\Facades\Artisan::call('cache:clear');
+
+        // (Baris pembersih cache sudah dihapus agar OTP tidak hancur saat double-click)
 
         $validator = Validator::make($request->all(),[
             "email" => "required|email|max:455|unique:users,email",
@@ -139,7 +139,11 @@ class AuthController extends Controller
         if (!$cachedData) return response()->json(['success' => false, 'message' => 'Kode OTP sudah kedaluwarsa atau email tidak ditemukan.'], 400);
 
         if ((string)$cachedData['otp'] !== (string)$request->otp) {
-            return response()->json(['success' => false, 'message' => 'Kode OTP salah!'], 400);
+            // TANGKAP BASAH JIKA SALAH
+            return response()->json([
+                'success' => false,
+                'message' => 'Kode OTP salah! (Sistem minta: ' . $cachedData['otp'] . ', Kamu ketik: ' . $request->otp . ')'
+            ], 400);
         }
 
         $user = User::create([
@@ -164,8 +168,8 @@ class AuthController extends Controller
     public function update(Request $request, string $id){
         // OBAT SAKTI: PAKSA AZURE MENGGUNAKAN SMTP LEWAT KODE
         config(['mail.default' => 'smtp']);
-        \Illuminate\Support\Facades\Artisan::call('config:clear');
-        \Illuminate\Support\Facades\Artisan::call('cache:clear');
+
+        // (Baris pembersih cache sudah dihapus agar OTP tidak hancur saat double-click)
 
         $user = User::find($id);
         if(!$user) return response()->json(["success"=>false, "message" => "resource not found"], 404);
@@ -240,7 +244,11 @@ class AuthController extends Controller
         if (!$cachedData) return response()->json(['success' => false, 'message' => 'Kode OTP sudah kedaluwarsa.'], 400);
 
         if ((string)$cachedData['otp'] !== (string)$request->otp) {
-            return response()->json(['success' => false, 'message' => 'Kode OTP salah!'], 400);
+            // TANGKAP BASAH JIKA SALAH
+            return response()->json([
+                'success' => false,
+                'message' => 'Kode OTP salah! (Sistem minta: ' . $cachedData['otp'] . ', Kamu ketik: ' . $request->otp . ')'
+            ], 400);
         }
 
         $user->email = $cachedData['new_email'];
