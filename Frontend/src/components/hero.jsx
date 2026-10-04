@@ -424,18 +424,7 @@ export default function HeroSection() {
                     </div>
                     
                     {/* Pita Balok Teks Solid di Bawah (Berisi TANGGAL & JUDUL) */}
-                    <div className="bg-blue-900 p-3 sm:p-4 flex-grow flex flex-col justify-start border-t-2 border-blue-800">
-                      
-                      {/* PENANDA TANGGAL (Agar terlihat ini yang paling baru) */}
-                      {card.created_at && (
-                        <span className="text-blue-300 text-[0.65rem] sm:text-xs font-semibold mb-1 sm:mb-1.5 uppercase tracking-wider">
-                          {new Date(card.created_at).toLocaleDateString("id-ID", {
-                            day: "numeric",
-                            month: "short", // cth: Jan, Feb
-                            year: "numeric"
-                          })}
-                        </span>
-                      )}
+                    <div className="bg-blue-900/60 p-3 sm:p-4 flex-grow flex flex-col justify-start border-t-2 border-blue-800 backdrop-blur-md">
 
                       <h3
                         className="text-white font-medium leading-snug line-clamp-2 text-left"
