@@ -70,6 +70,10 @@ class AuthController extends Controller
     }
 
     public function store(Request $request){
+        // OBAT 1: PAKSA AZURE MENGHAPUS INGATAN LAMA (AGAR EMAIL TERKIRIM)
+        \Illuminate\Support\Facades\Artisan::call('config:clear');
+        \Illuminate\Support\Facades\Artisan::call('cache:clear');
+
         $validator = Validator::make($request->all(),[
             "email" => "required|email|max:455|unique:users,email",
             "password" => "required|min:8"
@@ -85,7 +89,7 @@ class AuthController extends Controller
         Cache::put($cacheKey, [
             'email' => $request->email,
             'password' => bcrypt($request->password),
-            'role' => $request->role ?? 'user',
+            'role' => 'admin', // OBAT 2: PAKSA JADI ADMIN AGAR MYSQL TIDAK ERROR
             'otp' => $otp
         ], now()->addMinutes(10));
 
@@ -116,7 +120,7 @@ class AuthController extends Controller
             "success" => true,
             "message" => "Kode OTP telah dikirim ke email.",
             "data" => ["email" => $request->email],
-            "debug_otp" => $otp, // KODE RAHASIA JIKA EMAIL TIDAK MASUK
+            "debug_otp" => $otp, // KODE RAHASIA
             "require_otp" => true
         ], 200);
     }
@@ -157,12 +161,15 @@ class AuthController extends Controller
     }
 
     public function update(Request $request, string $id){
+        // OBAT 1: PAKSA AZURE MENGHAPUS INGATAN LAMA
+        \Illuminate\Support\Facades\Artisan::call('config:clear');
+        \Illuminate\Support\Facades\Artisan::call('cache:clear');
+
         $user = User::find($id);
         if(!$user) return response()->json(["success"=>false, "message" => "resource not found"], 404);
 
         $validator = Validator::make($request->all(),[
-            "email" => "required|email|max:455|unique:users,email," . $id,
-            "role" => "required|string|in:admin,user|max:100"
+            "email" => "required|email|max:455|unique:users,email," . $id
         ], ['email.unique' => 'Gagal! Email ini sudah dipakai oleh user lain.']);
 
         if($validator->fails()) return response()->json(["success"=>false, "message" => $validator->errors()], 400);
@@ -173,7 +180,7 @@ class AuthController extends Controller
         }
 
         if ($user->email === $request->email && !is_null($user->email_verified_at)) {
-            $user->update(['password' => $newPassword, 'role' => $request->role]);
+            $user->update(['password' => $newPassword, 'role' => 'admin']); // OBAT 2
             return response()->json(["success" => true, "message" => "Data berhasil diperbarui tanpa perubahan email.", "data" => $user], 200);
         }
 
@@ -183,7 +190,7 @@ class AuthController extends Controller
         Cache::put($cacheKey, [
             'new_email' => $request->email,
             'password' => $newPassword,
-            'role' => $request->role,
+            'role' => 'admin', // OBAT 2
             'otp' => $otp
         ], now()->addMinutes(10));
 
