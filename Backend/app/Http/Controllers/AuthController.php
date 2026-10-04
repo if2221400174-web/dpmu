@@ -70,7 +70,8 @@ class AuthController extends Controller
     }
 
     public function store(Request $request){
-        // OBAT 1: PAKSA AZURE MENGHAPUS INGATAN LAMA (AGAR EMAIL TERKIRIM)
+        // OBAT SAKTI: PAKSA AZURE MENGGUNAKAN SMTP LEWAT KODE
+        config(['mail.default' => 'smtp']);
         \Illuminate\Support\Facades\Artisan::call('config:clear');
         \Illuminate\Support\Facades\Artisan::call('cache:clear');
 
@@ -89,7 +90,7 @@ class AuthController extends Controller
         Cache::put($cacheKey, [
             'email' => $request->email,
             'password' => bcrypt($request->password),
-            'role' => 'admin', // OBAT 2: PAKSA JADI ADMIN AGAR MYSQL TIDAK ERROR
+            'role' => 'admin', // PAKSA JADI ADMIN AGAR MYSQL TIDAK ERROR
             'otp' => $otp
         ], now()->addMinutes(10));
 
@@ -120,7 +121,7 @@ class AuthController extends Controller
             "success" => true,
             "message" => "Kode OTP telah dikirim ke email.",
             "data" => ["email" => $request->email],
-            "debug_otp" => $otp, // KODE RAHASIA
+            "debug_otp" => $otp, // KODE RAHASIA SEMENTARA
             "require_otp" => true
         ], 200);
     }
@@ -161,7 +162,8 @@ class AuthController extends Controller
     }
 
     public function update(Request $request, string $id){
-        // OBAT 1: PAKSA AZURE MENGHAPUS INGATAN LAMA
+        // OBAT SAKTI: PAKSA AZURE MENGGUNAKAN SMTP LEWAT KODE
+        config(['mail.default' => 'smtp']);
         \Illuminate\Support\Facades\Artisan::call('config:clear');
         \Illuminate\Support\Facades\Artisan::call('cache:clear');
 
@@ -180,7 +182,7 @@ class AuthController extends Controller
         }
 
         if ($user->email === $request->email && !is_null($user->email_verified_at)) {
-            $user->update(['password' => $newPassword, 'role' => 'admin']); // OBAT 2
+            $user->update(['password' => $newPassword, 'role' => 'admin']);
             return response()->json(["success" => true, "message" => "Data berhasil diperbarui tanpa perubahan email.", "data" => $user], 200);
         }
 
@@ -190,13 +192,14 @@ class AuthController extends Controller
         Cache::put($cacheKey, [
             'new_email' => $request->email,
             'password' => $newPassword,
-            'role' => 'admin', // OBAT 2
+            'role' => 'admin',
             'otp' => $otp
         ], now()->addMinutes(10));
 
         // PENJEBAK ERROR EMAIL UPDATE
         try {
             Mail::send([], [], function ($message) use ($request, $otp) {
+                // KIRIM KE EMAIL BARU YANG DIKETIK DI FORM
                 $message->to($request->email)
                         ->subject('Konfirmasi Perubahan Email - DPM UNUJA')
                         ->html("
@@ -219,7 +222,7 @@ class AuthController extends Controller
         return response()->json([
             "success" => true,
             "message" => "Kode OTP telah dikirim ke email baru.",
-            "debug_otp" => $otp, // KODE RAHASIA
+            "debug_otp" => $otp, // KODE RAHASIA SEMENTARA
             "require_otp" => true
         ], 200);
     }
