@@ -32,9 +32,10 @@ export default function HeroSection() {
   useEffect(() => {
     getBeritaDpm()
       .then((data) => {
+        // SISTEM PENGURUTAN: TANGGAL TERBARU DI ATAS
         const sorted = [...data]
           .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-          .slice(0, 4);
+          .slice(0, 4); // Ambil 4 teratas
         setInfoCards(sorted);
         setAllData((prev) => ({ ...prev, informasi: data }));
       })
@@ -69,7 +70,6 @@ export default function HeroSection() {
     goTo((bgIndex - 1 + BG_IMAGES.length) % BG_IMAGES.length, "prev");
   }, [bgIndex, goTo]);
 
-  // After slide animation ends, commit the new index
   const handleSlideEnd = () => {
     if (nextIndex !== null) {
       setBgIndex(nextIndex);
@@ -391,7 +391,7 @@ export default function HeroSection() {
           </div>
         </div>
 
-        {/* ── Informasi Terbaru (DESAIN BARU: Pita Navy di Bawah) ──────────────────────────── */}
+        {/* ── Informasi Terbaru (DESAIN BARU: Pita Navy dengan Tanggal Terbit) ──────────────────────────── */}
         <div className="bg-white py-5 sm:py-7">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl sm:text-3xl lg:text-4xl text-center mb-5 text-blue-900 font-bold">
@@ -423,8 +423,20 @@ export default function HeroSection() {
                       />
                     </div>
                     
-                    {/* Pita Balok Teks Solid di Bawah (Mirip Referensi) */}
-                    <div className="bg-blue-900 p-3 sm:p-4 flex-grow flex items-center justify-start border-t-2 border-blue-800">
+                    {/* Pita Balok Teks Solid di Bawah (Berisi TANGGAL & JUDUL) */}
+                    <div className="bg-blue-900 p-3 sm:p-4 flex-grow flex flex-col justify-start border-t-2 border-blue-800">
+                      
+                      {/* PENANDA TANGGAL (Agar terlihat ini yang paling baru) */}
+                      {card.created_at && (
+                        <span className="text-blue-300 text-[0.65rem] sm:text-xs font-semibold mb-1 sm:mb-1.5 uppercase tracking-wider">
+                          {new Date(card.created_at).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "short", // cth: Jan, Feb
+                            year: "numeric"
+                          })}
+                        </span>
+                      )}
+
                       <h3
                         className="text-white font-medium leading-snug line-clamp-2 text-left"
                         style={{ fontSize: "clamp(0.85rem, 1.5vw, 1rem)" }}
