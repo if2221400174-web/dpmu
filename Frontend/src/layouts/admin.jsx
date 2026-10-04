@@ -1,10 +1,16 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { logout, useDecodeToken } from "../_sevices/auth";
-import logodpm from '../assets/logo-DPM-Unuja.png'
+import logodpm from '../assets/logo-DPM-Unuja.png';
 
+// 1. IMPORT MESIN PENJAGA SESI
+import useSessionManager from "../hooks/useSessionManager"; 
 
 export default function AdminLayout() {
+  
+  // 2. NYALAKAN MESIN PENJAGA SESI DI SINI (Logout Otomatis 1 Jam)
+  useSessionManager(); 
+
   const navigate = useNavigate();
   const location = useLocation();
   const token = localStorage.getItem("accessToken");
@@ -97,6 +103,7 @@ export default function AdminLayout() {
                   <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-900 rounded-lg flex items-center justify-center transition-transform duration-200 hover:scale-105">
                     <img
                     src={logodpm}
+                    alt="Logo DPM"
                     />
                   </div>
                   <span className="hidden sm:block text-lg lg:text-xl font-semibold text-gray-100 ">DPM U</span>
