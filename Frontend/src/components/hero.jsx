@@ -300,7 +300,7 @@ export default function HeroSection() {
             />
           )}
 
-          {/* Gradient overlay untuk Background Utama */}
+          {/* Gradient overlay untuk Background Utama (tetap dipertahankan untuk judul Hero) */}
           <div
             className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-80"
             style={{ zIndex: 5 }}
@@ -391,53 +391,47 @@ export default function HeroSection() {
           </div>
         </div>
 
-        {/* ── Informasi Terbaru ──────────────────────────── */}
+        {/* ── Informasi Terbaru (DESAIN BARU: Pita Navy di Bawah) ──────────────────────────── */}
         <div className="bg-white py-5 sm:py-7">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl text-center mb-5 text-blue-900">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl text-center mb-5 text-blue-900 font-bold">
               Informasi Terbaru
             </h2>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-5 mb-6">
               {loading ? (
                 Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="skeleton" style={{ paddingBottom: "133%" }} />
+                  <div key={i} className="skeleton" style={{ paddingBottom: "120%" }} />
                 ))
               ) : infoCards.length > 0 ? (
                 infoCards.map((card) => (
                   <Link
                     key={card.id}
                     to={`/informasi/${card.id}`}
-                    className="group relative overflow-hidden rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
+                    // Memakai flex-col agar gambar di atas, dan blok pita teks nempel di bawah
+                    className="group flex flex-col overflow-hidden rounded-xl shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 bg-blue-900 border border-blue-100"
                   >
-                    {/* Frame Foto */}
-                    <div className="relative overflow-hidden bg-gray-200" style={{ paddingBottom: "133%" }}>
+                    {/* Frame Foto (Sekarang Bersih Tanpa Bayangan & Teks) */}
+                    <div className="relative overflow-hidden bg-gray-200" style={{ paddingBottom: "100%" }}>
                       <img
                         src={`${beritaImageStorage}/${card.foto_berita}`}
                         alt={card.judul}
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 z-0"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         onError={(e) => {
                           e.target.src = `https://placehold.co/300x400/1e3a8a/FFFFFF?text=${encodeURIComponent(card.judul)}`;
                         }}
                       />
-                      
-                      {/* LAPISAN 1: Bayangan Gelap Standar (Lebih Pekat) */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-90 z-10" />
-                      
-                      {/* LAPISAN 2: Teks dengan Shadow Kuat */}
-                      <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 z-20">
-                        <h3
-                          className="text-white font-bold leading-snug line-clamp-3 drop-shadow-md"
-                          style={{ 
-                            fontSize: "clamp(0.75rem, 1.6vw, 1rem)",
-                            textShadow: "0px 2px 4px rgba(0,0,0,0.8)" // Jaminan mutu anti-silau
-                          }}
-                        >
-                          {card.judul}
-                        </h3>
-                      </div>
                     </div>
-                    <div className="absolute inset-0 border-2 border-transparent group-hover:border-blue-400 rounded-2xl transition-colors duration-300 pointer-events-none z-30" />
+                    
+                    {/* Pita Balok Teks Solid di Bawah (Mirip Referensi) */}
+                    <div className="bg-blue-900 p-3 sm:p-4 flex-grow flex items-center justify-start border-t-2 border-blue-800">
+                      <h3
+                        className="text-white font-medium leading-snug line-clamp-2 text-left"
+                        style={{ fontSize: "clamp(0.85rem, 1.5vw, 1rem)" }}
+                      >
+                        {card.judul}
+                      </h3>
+                    </div>
                   </Link>
                 ))
               ) : (
@@ -450,7 +444,7 @@ export default function HeroSection() {
             <div className="text-center">
               <Link
                 to="/informasi"
-                className="inline-block px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 text-xs sm:text-base"
+                className="inline-block px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 text-sm sm:text-base font-medium"
               >
                 Dapatkan informasi lainnya
               </Link>
