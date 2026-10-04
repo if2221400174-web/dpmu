@@ -70,6 +70,7 @@ class AuthController extends Controller
     }
 
     public function store(Request $request){
+        return response()->json(config('mail')); // <--- TAMBAHKAN BARIS INI SEMENTARA
         // OBAT 1: PAKSA AZURE MENGHAPUS INGATAN LAMA (AGAR EMAIL TERKIRIM)
         \Illuminate\Support\Facades\Artisan::call('config:clear');
         \Illuminate\Support\Facades\Artisan::call('cache:clear');
