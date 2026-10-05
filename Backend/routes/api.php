@@ -26,23 +26,24 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 // ─── Public Routes (tanpa auth) ─────────────────────────
-Route::get('/produkhukums',          [ProdukHukumController::class, 'index']);
-Route::get('/produkhukums/{id}',     [ProdukHukumController::class, 'show']);
+Route::get('/produkhukums',              [ProdukHukumController::class, 'index']);
+Route::get('/produkhukums/{id}',         [ProdukHukumController::class, 'show']);
+Route::get('/produkhukums/{id}/download',[ProdukHukumController::class, 'downloadFile']); // <-- RUTE BARU DOWNLOAD FILE
 
-Route::get('/keputusans',            [KeputusanController::class, 'index']);
-Route::get('/keputusans/{id}',       [KeputusanController::class, 'show']);
+Route::get('/keputusans',                [KeputusanController::class, 'index']);
+Route::get('/keputusans/{id}',           [KeputusanController::class, 'show']);
 
-Route::get('/tentangdpms',           [TentangDpmController::class, 'index']);
-Route::get('/tentangdpms/{id}',      [TentangDpmController::class, 'show']);
+Route::get('/tentangdpms',               [TentangDpmController::class, 'index']);
+Route::get('/tentangdpms/{id}',          [TentangDpmController::class, 'show']);
 
-Route::get('/beritadpms',            [BeritaDpmController::class, 'index']);
-Route::get('/beritadpms/{id}',       [BeritaDpmController::class, 'show']);
+Route::get('/beritadpms',                [BeritaDpmController::class, 'index']);
+Route::get('/beritadpms/{id}',           [BeritaDpmController::class, 'show']);
 
-Route::get('/strukturdpms',          [StrukturDpmController::class, 'index']);
-Route::get('/strukturdpms/{id}',     [StrukturDpmController::class, 'show']);
+Route::get('/strukturdpms',              [StrukturDpmController::class, 'index']);
+Route::get('/strukturdpms/{id}',         [StrukturDpmController::class, 'show']);
 
-Route::post('/pengaduans',           [PengaduanController::class, 'store']);
-Route::post('/kritikdpms',           [KritikDpmController::class, 'store']);
+Route::post('/pengaduans',               [PengaduanController::class, 'store']);
+Route::post('/kritikdpms',               [KritikDpmController::class, 'store']);
 
 // ─── Admin Routes (butuh auth) ──────────────────────────
 Route::middleware(['auth:api', 'role:admin'])->group(function () {

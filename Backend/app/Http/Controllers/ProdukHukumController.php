@@ -49,7 +49,7 @@ class ProdukHukumController extends Controller
 
         //3. upload file
         $file = $request->file("file");
-        $file ->store('fileHukum', 'public');
+        $file->store('fileHukum', 'public');
 
         //4. insert data
         $porhum = ProdukHukum::create([
@@ -60,13 +60,12 @@ class ProdukHukumController extends Controller
             "file" => $file->hashName(),
         ]);
 
-
         //5. response
         return response()->json([
             "success"=> true,
             "message" => "resource add successfully!",
             "data" => $porhum
-        ],200);
+        ], 200);
     }
 
     public function show(string $id)
@@ -97,6 +96,7 @@ class ProdukHukumController extends Controller
                 "messege" => "resource not found"
             ], 404);
         }
+
         //2. validator
         $validator = Validator::make($request->all(),[
             'judul' => 'required|string|max:255',
@@ -112,6 +112,7 @@ class ProdukHukumController extends Controller
                 "messege" => $validator->errors()
             ], 400);
         }
+
         //3 siapkan data yang mau diupdate
         $data = [
             "judul" => $request->judul,
@@ -119,16 +120,17 @@ class ProdukHukumController extends Controller
             "status" => $request->status,
             "tanggal_ditetapkan" => $request->tanggal_ditetapkan
         ];
+
         //4 handle file(upload atau delete)
         if ($request->file('file')) {
-        $file = $request->file('file');
-        $file->store('fileHukum', 'public');
+            $file = $request->file('file');
+            $file->store('fileHukum', 'public');
 
-        if ($porhum->file) {
-            Storage::disk('public')->delete('fileHukum/' . $porhum->file);
+            if ($porhum->file) {
+                Storage::disk('public')->delete('fileHukum/' . $porhum->file);
+            }
+            $data['file'] = $file->hashName();
         }
-        $data['file'] = $file->hashName();
-    }
 
         //5, update data
         $porhum->update($data);
@@ -144,18 +146,58 @@ class ProdukHukumController extends Controller
         $porhum = ProdukHukum::find($id);
         if (!$porhum){
             return response()->json([
-                "success" => true,
+                "success" => false,
                 "messege" => "resourse not found",
-            ]);
+            ], 404);
         }
-        if ($porhum ->file){
+
+        if ($porhum->file){
             Storage::disk('public')->delete('fileHukum/'.$porhum->file);
         }
 
-        $porhum ->delete();
+        $porhum->delete();
         return response()->json([
             "success" => true,
             "messege" => "resourse deleted successfully",
-        ]);
+        ], 200);
+    }
+
+    // =========================================================================
+    // FITUR BARU: DOWNLOAD FILE DENGAN NAMA JUDUL
+    // =========================================================================
+    public function downloadFile(string $id)
+    {
+        $porhum = ProdukHukum::find($id);
+
+        // Cek apakah data dan file-nya ada
+        if (!$porhum || !$porhum->file) {
+            return response()->json([
+                "success" => false,
+                "messege" => "File not found"
+            ], 404);
+        }
+
+        $path = 'fileHukum/' . $porhum->file;
+
+        // Cek apakah file fisik benar-benar ada di storage server
+        if (!Storage::disk('public')->exists($path)) {
+            return response()->json([
+                "success" => false,
+                "messege" => "File missing on server"
+            ], 404);
+        }
+
+        // 1. Ubah spasi dan karakter aneh pada judul menjadi garis bawah (underscore)
+        // Contoh: "UU Pemilu 2026!" diubah menjadi "UU_Pemilu_2026_"
+        $safeTitle = preg_replace('/[^a-zA-Z0-9]/', '_', $porhum->judul);
+
+        // 2. Ambil ekstensi aslinya (misalnya: pdf atau docx)
+        $extension = pathinfo($porhum->file, PATHINFO_EXTENSION);
+
+        // 3. Gabungkan Judul Bersih dengan Ekstensinya
+        $namaDownload = $safeTitle . '.' . $extension;
+
+        // 4. Perintahkan server untuk mendownload dengan nama baru tersebut
+        return Storage::disk('public')->download($path, $namaDownload);
     }
 }
