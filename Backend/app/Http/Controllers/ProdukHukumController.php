@@ -36,7 +36,7 @@ class ProdukHukumController extends Controller
             'abstract' => 'required|string|max:54255',
             'status' => 'required|string|max:255',
             'tanggal_ditetapkan' => 'required|date',
-            'file' => 'required|mimes:pdf,doc,docx,xls,xlsx|max:2048'
+            'file' => 'required|mimes:pdf,doc,docx,xls,xlsx|max:20480'
         ]);
 
         //2. check validator eror
@@ -103,7 +103,7 @@ class ProdukHukumController extends Controller
             'abstract' => 'required|string|max:54255',
             'status' => 'required|string|max:255',
             'tanggal_ditetapkan' => 'required|date',
-            'file' => 'nullable|mimes:pdf,doc,docx,xls,xlsx|max:2048'
+            'file' => 'nullable|mimes:pdf,doc,docx,xls,xlsx|max:20480'
         ]);
 
         if($validator->fails()){
@@ -115,7 +115,9 @@ class ProdukHukumController extends Controller
         //3 siapkan data yang mau diupdate
         $data = [
             "judul" => $request->judul,
-
+            "abstract" => $request->abstract,
+            "status" => $request->status,
+            "tanggal_ditetapkan" => $request->tanggal_ditetapkan
         ];
         //4 handle file(upload atau delete)
         if ($request->file('file')) {
