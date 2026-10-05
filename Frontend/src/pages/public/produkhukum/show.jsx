@@ -169,15 +169,19 @@ export default function ShowProdukHukum() {
                 </div>
                 {/* Body */}
                 <div className="px-5 py-4 space-y-4">
-                  {/* Nama file */}
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                  {/* Nama file (Diubah Menjadi Judul Asli + Ekstensi) */}
+                  <div className="flex items-center gap-3 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
                     <span className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-red-100 text-red-700 text-xs font-bold flex-shrink-0">
                       {getFileExtension(produk.file)}
                     </span>
-                    <p className="text-xs text-gray-600 break-all leading-snug">{produk.file}</p>
+                    <p className="text-sm font-semibold text-blue-900 break-words leading-snug">
+                      {/* Trik ajaib: Menampilkan judul dan ekstensi */}
+                      {produk.judul}.{getFileExtension(produk.file).toLowerCase()}
+                    </p>
                   </div>
                   {/* Tombol */}
                   <div className="flex gap-2">
+                    {/* Tombol Preview: Tetap menggunakan raw storage link agar bisa dibuka di tab baru */}
                     <a
                       href={`${hukumfiletorage}/${produk.file}`}
                       target="_blank"
@@ -190,10 +194,11 @@ export default function ShowProdukHukum() {
                       </svg>
                       Preview
                     </a>
+                    
+                    {/* Tombol Download: Menggunakan API Download buatan kita */}
                     <a
-                      href={`${hukumfiletorage}/${produk.file}`}
-                      download
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-blue-900 px-3 py-2.5 text-xs font-semibold text-blue-900 hover:bg-blue-50 transition"
+                      href={`https://dpmu-backend-d2gbcvg8deh2egat.southeastasia-01.azurewebsites.net/api/produkhukums/${produk.id}/download`}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-blue-900 px-3 py-2.5 text-xs font-bold text-blue-900 hover:bg-blue-50 transition shadow-sm"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
