@@ -1,22 +1,30 @@
+@php
+    $gambar = $berita->foto_berita
+        ? secure_url('storage/fotoBerita/' . $berita->foto_berita)
+        : 'https://dpmunuja.id/assets/logo-DPM-Unuja-AtyMC0db.png';
+    $deskripsi = \Illuminate\Support\Str::limit(trim(strip_tags($berita->isi_berita)), 160);
+    $pageUrl = 'https://dpmunuja.id/informasi/' . ($berita->slug ?: $berita->id);
+@endphp
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <!-- Meta Tags Khusus agar dibaca oleh WhatsApp, FB, dll -->
-    <meta property="og:type" content="article" />
-    <meta property="og:title" content="{{ $berita->judul }}" />
-    <meta property="og:description" content="{{ Str::limit(strip_tags($berita->isi_berita), 120) }}" />
-    <meta property="og:image" content="{{ asset('storage/fotoBerita/' . $berita->foto_berita) }}" />
-
-    <title>{{ $berita->judul }}</title>
+    <title>{{ $berita->judul }} | DPM UNUJA</title>
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="DPM UNUJA">
+    <meta property="og:title" content="{{ $berita->judul }}">
+    <meta property="og:description" content="{{ $deskripsi }}">
+    <meta property="og:url" content="{{ $pageUrl }}">
+    <meta property="og:image" content="{{ $gambar }}">
+    <meta property="og:image:secure_url" content="{{ $gambar }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ $berita->judul }}">
+    <meta name="twitter:description" content="{{ $deskripsi }}">
+    <meta name="twitter:image" content="{{ $gambar }}">
+    <meta http-equiv="refresh" content="0; url={{ $pageUrl }}">
 </head>
 <body>
-    <p>Mengalihkan ke halaman website...</p>
-
-    <!-- SCRIPT AJAIB: Jika manusia yang mengklik link ini, langsung lempar ke web React kamu -->
-    <script>
-        // Ganti dpmunuja.id dengan domain aslimu jika ada perubahan
-        window.location.href = "https://dpmunuja.id/informasi/" + "{{ $berita->slug }}";
-    </script>
+    <p>Mengalihkan... <a href="{{ $pageUrl }}">Klik di sini</a></p>
+    <script>window.location.href = "{{ $pageUrl }}";</script>
 </body>
 </html>

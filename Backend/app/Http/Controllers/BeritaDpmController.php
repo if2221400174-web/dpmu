@@ -183,10 +183,14 @@ class BeritaDpmController extends Controller
     // ========================================================
     public function share($slug)
     {
-        // Cari berita berdasarkan slug
-        $berita = BeritaDpm::where('slug', $slug)->firstOrFail();
+        $query = BeritaDpm::where('slug', $slug);
 
-        // Panggil file view blade bernama "share_berita.blade.php"
+        if (ctype_digit($slug)) {
+            $query->orWhere('id', $slug);
+        }
+
+        $berita = $query->firstOrFail();
+
         return view('share_berita', compact('berita'));
     }
 }
