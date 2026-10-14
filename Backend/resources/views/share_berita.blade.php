@@ -14,14 +14,13 @@
     <meta property="og:site_name" content="DPM UNUJA">
     <meta property="og:title" content="{{ $berita->judul }}">
     <meta property="og:description" content="{{ $deskripsi }}">
-    <meta property="og:url" content="{{ $pageUrl }}">
     <meta property="og:image" content="{{ $gambar }}">
     <meta property="og:image:secure_url" content="{{ $gambar }}">
+    <meta property="og:image:type" content="image/jpeg">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $berita->judul }}">
     <meta name="twitter:description" content="{{ $deskripsi }}">
     <meta name="twitter:image" content="{{ $gambar }}">
-    <meta http-equiv="refresh" content="0; url={{ $pageUrl }}">
 </head>
 <body>
     <p>Mengalihkan... <a href="{{ $pageUrl }}">Klik di sini</a></p>
