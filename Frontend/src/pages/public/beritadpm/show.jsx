@@ -3,7 +3,6 @@ import { Link, useParams } from "react-router-dom";
 import { showBeritaDpm } from "../../../_sevices/beritadpm";
 import { beritaImageStorage } from "../../../_api";
 
-// Konversi konten — kalau plain text (tidak ada tag HTML), bungkus tiap baris jadi <p>
 const formatContent = (content) => {
   if (!content) return "";
   const hasHtmlTags = /<[a-z][\s\S]*>/i.test(content);
@@ -38,16 +37,12 @@ const formatTime = (dateString) => {
 };
 
 export default function ShowBeritaDpm() {
-  // id di sini sekarang bisa menerima angka (ID lama) ATAU teks (Slug baru)
   const { id } = useParams(); 
   const [berita, setBerita] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // State untuk efek tulisan "Tersalin!" pada tombol Copy Link
   const [copied, setCopied] = useState(false);
 
-  // 1. Fetch Data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -62,7 +57,6 @@ export default function ShowBeritaDpm() {
     fetchData();
   }, [id]);
 
-  // 2. Set Meta Tags (Open Graph) - Tetap ada untuk jaga-jaga
   useEffect(() => {
     if (berita) {
       document.title = `${berita.judul} | DPM UNUJA`;
@@ -92,21 +86,29 @@ export default function ShowBeritaDpm() {
   const displayDate = berita?.tanggal_terbit || berita?.created_at || berita?.tanggal;
 
   // =========================================================================
-  // SETUP SHARE LINK AJAIB (LARAVEL BACKEND)
+  // URL CANTIK → untuk tombol Copy Link (yang disalin user)
   // =========================================================================
-  
-  
-  // Kita buat link khusus yang mengarah ke Laravel agar gambar muncul di WA
-  // Jika berita lama belum punya slug, kita pakai id sebagai cadangan
-  const rawShareUrl = berita ? `https://dpmunuja.id/informasi/${berita.slug || berita.id}` : "";
+  const prettyUrl = berita
+    ? `https://dpmunuja.id/informasi/${berita.slug || berita.id}`
+    : "";
+
+  // =========================================================================
+  // URL LARAVEL → untuk share ke WA/Telegram agar gambar bisa muncul
+  // Laravel akan baca OG Tags lalu redirect ke React secara otomatis
+  // =========================================================================
+  const rawShareUrl = berita
+    ? `https://dpmu-backend-d2gbcvg8deh2egat.southeastasia-01.azurewebsites.net/share/informasi/${berita.slug || berita.id}`
+    : "";
+
   const shareUrl = encodeURIComponent(rawShareUrl);
   const shareTitle = encodeURIComponent(berita?.judul || "Berita DPM UNUJA");
 
+  // Tombol Copy → salin URL cantik (bukan URL Laravel)
   const handleCopyLink = () => {
-    if (rawShareUrl) {
-      navigator.clipboard.writeText(rawShareUrl);
+    if (prettyUrl) {
+      navigator.clipboard.writeText(prettyUrl);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000); // Tulisan "Tersalin!" akan hilang setelah 2 detik
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -159,7 +161,6 @@ export default function ShowBeritaDpm() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
 
-        {/* Kembali */}
         <Link to="/informasi" className="inline-flex items-center gap-2 text-blue-900 hover:text-blue-700 mb-6 text-sm">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/>
@@ -169,7 +170,6 @@ export default function ShowBeritaDpm() {
 
         <article className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
 
-          {/* Foto */}
           {berita.foto_berita && (
             <div className="relative">
               <img
@@ -188,7 +188,6 @@ export default function ShowBeritaDpm() {
 
           <div className="p-6 sm:p-8">
 
-            {/* Judul */}
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-snug mb-3">
               {berita.judul}
             </h1>
@@ -197,7 +196,6 @@ export default function ShowBeritaDpm() {
               {formatDate(displayDate)}, {formatTime(displayDate)}
             </p>
 
-            {/* AREA TOMBOL SHARE */}
             <div className="flex items-center gap-2 mb-6">
               <span className="text-sm font-medium text-gray-600 mr-1">Bagikan:</span>
               
@@ -214,7 +212,6 @@ export default function ShowBeritaDpm() {
                 </a>
               ))}
 
-              {/* TOMBOL COPY LINK */}
               <button
                 onClick={handleCopyLink}
                 title="Salin Tautan"
@@ -223,28 +220,22 @@ export default function ShowBeritaDpm() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
                 </svg>
-                
-                {/* Tooltip Tulisan "Tersalin!" */}
                 {copied && (
                   <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
                     Tersalin!
-                    {/* Panah kecil ke bawah */}
                     <svg className="absolute text-gray-800 h-2 w-full left-0 top-full" x="0px" y="0px" viewBox="0 0 255 255" xmlSpace="preserve"><polygon className="fill-current" points="0,0 127.5,127.5 255,0"/></svg>
                   </span>
                 )}
               </button>
             </div>
 
-            {/* Divider */}
             <div className="border-t border-gray-100 mb-6"/>
 
-            {/* Isi Berita */}
             <div
               className="berita-content text-gray-700 text-[15px] leading-relaxed"
               dangerouslySetInnerHTML={{ __html: formatContent(berita.isi_berita) }}
             />
 
-            {/* Footer */}
             <div className="mt-8 pt-6 border-t border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-blue-900 flex items-center justify-center">
