@@ -103,10 +103,10 @@ export default function ShowBeritaDpm() {
   const shareUrl = encodeURIComponent(rawShareUrl);
   const shareTitle = encodeURIComponent(berita?.judul || "Berita DPM UNUJA");
 
-  // Tombol Copy → salin URL cantik (bukan URL Laravel)
+  // Tombol Copy → salin URL Laravel agar preview bergambar
   const handleCopyLink = () => {
-    if (prettyUrl) {
-      navigator.clipboard.writeText(prettyUrl);
+    if (rawShareUrl) {
+      navigator.clipboard.writeText(rawShareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
