@@ -29,7 +29,7 @@ class TentangDpmController extends Controller
     {
          //1 validator
         $validator = Validator::make($request->all(),[
-            'tujuan' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'tujuan' => 'required|string|max:2000',
             'fungsi' => 'required|string|max:2000',
             'visi' => 'required|string|max:2000',
             'misi' => 'required|string|max:2000',
@@ -90,7 +90,7 @@ class TentangDpmController extends Controller
         }
         //2. validator
         $validator = Validator::make($request->all(),[
-            'tujuan' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'tujuan' => 'required|string|max:2000',
             'fungsi' => 'required|string|max:2000',
             'visi' => 'required|string|max:2000',
             'misi' => 'required|string|max:2000',
